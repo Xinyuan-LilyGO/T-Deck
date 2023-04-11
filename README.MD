@@ -9,6 +9,7 @@
 ````
 
 examples 
+├─Keyboard_ESP32C3       # ESP32C3 keyboard I2C slave
 ├─Microphone             # Noise detection  
 └─UnitTest               # Factory hardware unit testing           
 

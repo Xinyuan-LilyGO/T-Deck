@@ -1,0 +1,17 @@
+#######################################
+# Syntax Coloring Map For TouchLib By Micky
+# github:https://github.com/mmMicky
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+TouchLib	KEYWORD1
+TouchLibCSTSelf	KEYWORD1
+TouchLibCSTMutual	KEYWORD1
+TouchLibGT911	KEYWORD1
+TouchLibZTW622	KEYWORD1
+TouchLibFT3267	KEYWORD1
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################

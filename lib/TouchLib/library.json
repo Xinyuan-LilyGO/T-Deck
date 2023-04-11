@@ -1,0 +1,30 @@
+{
+    "name": "TouchLib",
+    "version": "0.0.2",
+    "description": "Integrated touch driver (CST328, CST816, CST820, GT911, FT3267, FT5x06)",
+    "keywords": "TouchLib",
+    "authors": [{
+        "name": "mmMicky",
+        "url": "https://github.com/mmMicky",
+        "maintainer": true
+    }],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mmMicky/TouchLib.git"
+    },
+    "homepage": "https://github.com/mmMicky/TouchLib",
+    "export": {
+        "include": [
+            "LICENSE",
+            "library.json",
+            "library.properties",
+            "README.md",
+            "keywords.txt",
+            "src/*",
+            "examples/*"
+        ]
+    },
+    "frameworks": ["arduino", "espidf"],
+    "platforms": "esp32",
+    "headers": "TouchLib.h"
+}

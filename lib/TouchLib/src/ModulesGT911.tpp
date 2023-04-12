@@ -74,11 +74,11 @@ public:
 
         this->writeRegister(GT911_COMMAND, (uint8_t)0x02); // software reset
         delay(200);
-        // int val = readRegister(GT911_MODULE_SWITCH_1);
-        // val &= 0XFC;
-        // val |= 0x03;
-        // this->writeRegister(GT911_MODULE_SWITCH_1, (uint8_t)val);
-        // delay(200);
+        int val = readRegister(GT911_MODULE_SWITCH_1);
+        val &= 0XFC;
+        val |= 0x03;
+        this->writeRegister(GT911_MODULE_SWITCH_1, (uint8_t)val);
+        delay(200);
         return  true;
     }
 

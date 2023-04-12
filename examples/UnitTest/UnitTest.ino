@@ -588,7 +588,6 @@ void initBoard()
     pinMode(BOARD_SPI_MISO, INPUT_PULLUP);
     SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
 
-    pinMode(BOARD_BOOT, INPUT_PULLUP);
     pinMode(BOARD_TBOX_UP, INPUT_PULLUP);
     pinMode(BOARD_TBOX_DOWN, INPUT_PULLUP);
     pinMode(BOARD_TBOX_LEFT, INPUT_PULLUP);
@@ -609,14 +608,12 @@ void initBoard()
     tft.fillScreen(TFT_BLACK);
     Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
+    // Set touch int input
+    pinMode(BOARD_TOUCH_INT, INPUT); delay(20);
+
     scanDevices(&Wire);
 
     touch.init();
-
-    // int16_t x, y;
-    // while (1) {
-    //     getTouch(x, y); delay(10);
-    // }
 
     Wire.beginTransmission(GT911_SLAVE_ADDRESS1);
     ret = Wire.endTransmission() == 0;
@@ -828,7 +825,7 @@ static void mouse_read(lv_indev_drv_t *indev, lv_indev_data_t *data)
                                  BOARD_TBOX_DOWN,
                                  BOARD_TBOX_LEFT,
                                  BOARD_TBOX_RIGHT,
-                                 BOARD_BOOT
+                                 BOARD_BOOT_PIN
                                 };
     static bool last_dir[5];
     uint8_t pos = 50;

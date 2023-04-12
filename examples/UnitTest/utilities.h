@@ -36,7 +36,6 @@
 #define BOARD_SPI_MISO      38
 #define BOARD_SPI_SCK       40
 
-#define BOARD_BOOT          0
 #define BOARD_TBOX_UP       3
 #define BOARD_TBOX_DOWN     2
 #define BOARD_TBOX_LEFT     1

@@ -110,7 +110,6 @@ void scanDevices(TwoWire *w)
             }
             Serial.print(addr, HEX);
             Serial.println(" !");
-            break;
 
         } else if (err == 4) {
             Serial.print("Unknow error at address 0x");

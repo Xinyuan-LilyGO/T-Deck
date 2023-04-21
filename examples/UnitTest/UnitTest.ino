@@ -29,7 +29,6 @@ using namespace ace_button;
 #define USING_SX1262
 
 
-#define LVGL_BUFFER_SIZE    ( TFT_HEIGHT * 100 )
 
 #define VAD_SAMPLE_RATE_HZ              16000
 #define VAD_FRAME_LENGTH_MS             30
@@ -46,9 +45,11 @@ LV_IMG_DECLARE(image4);
 TouchLib touch(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, GT911_SLAVE_ADDRESS1);
 
 #ifdef USING_SX1262
+#define RADIO_FREQ          868.0
 SX1262 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUSY_PIN);
 #else
-SX1276 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUSY_PIN);
+#define RADIO_FREQ          433.0
+SX1268 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUSY_PIN);
 #endif
 
 TFT_eSPI        tft;
@@ -66,6 +67,8 @@ bool        transmissionFlag = true;
 bool        enableInterrupt = true;
 int         transmissionState ;
 bool        hasRadio = false;
+bool        touchDected = false;
+bool        kbDected = false;
 bool        sender = true;
 uint32_t    sendCount = 0;
 uint32_t    runningMillis = 0;
@@ -128,8 +131,10 @@ bool setupRadio()
     digitalWrite(BOARD_SDCARD_CS, HIGH);
     digitalWrite(RADIO_CS_PIN, HIGH);
     digitalWrite(BOARD_TFT_CS, HIGH);
+    SPI.end();
+    SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
 
-    int state = radio.begin(868.0);
+    int state = radio.begin(RADIO_FREQ);
     if (state == RADIOLIB_ERR_NONE) {
         Serial.println("Start Radio success!");
     } else {
@@ -138,8 +143,10 @@ bool setupRadio()
         return false;
     }
 
+    hasRadio = true;
+
     // set carrier frequency to 868.0 MHz
-    if (radio.setFrequency(868.0) == RADIOLIB_ERR_INVALID_FREQUENCY) {
+    if (radio.setFrequency(RADIO_FREQ) == RADIOLIB_ERR_INVALID_FREQUENCY) {
         Serial.println(F("Selected frequency is invalid for this module!"));
         return false;
     }
@@ -195,11 +202,7 @@ bool setupRadio()
 
     // set the function that will be called
     // when new packet is received
-#ifdef USING_SX1262
     radio.setDio1Action(setFlag);
-#else
-    radio.setDio0Action(setFlag);
-#endif
     return true;
 
 }
@@ -321,6 +324,7 @@ void taskplaySong(void *p)
                 audio.loop();
             }
         }
+        audio.stopSong();
         vTaskSuspend(NULL);
     }
 }
@@ -341,6 +345,11 @@ void loopRadio()
         lv_textarea_set_text(radio_ta, "Radio not online !");
         return ;
     }
+
+    digitalWrite(BOARD_SDCARD_CS, HIGH);
+    digitalWrite(RADIO_CS_PIN, HIGH);
+    digitalWrite(BOARD_TFT_CS, HIGH);
+
     char buf[256];
     if (lv_tabview_get_tab_act(tv) != 1) {
         return ;
@@ -520,6 +529,8 @@ void factory_ui(lv_obj_t *parent)
     lv_textarea_set_text(hw_ta, "");
     lv_textarea_set_max_length(hw_ta, 1024);
     lv_obj_align(hw_ta, LV_ALIGN_TOP_MID, 0, 0);
+
+
     lv_obj_add_style(hw_ta, &ta_bg_style, LV_PART_ANY);
 
     radio_ta = lv_textarea_create(t2);
@@ -559,7 +570,14 @@ void factory_ui(lv_obj_t *parent)
 
 }
 
+
 static bool getTouch(int16_t &x, int16_t &y);
+
+bool checkKb()
+{
+    Wire.requestFrom(0x55, 1);
+    return Wire.read() != -1;
+}
 
 void initBoard()
 {
@@ -567,9 +585,6 @@ void initBoard()
 
     Serial.begin(115200);
     Serial.println("T-DECK factory");
-
-    pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
-    pinMode(BOARD_TOUCH_INT, INPUT);
 
     //! The board peripheral power control pin needs to be set to HIGH when using the peripheral
     pinMode(BOARD_POWERON, OUTPUT);
@@ -587,6 +602,7 @@ void initBoard()
     pinMode(BOARD_SPI_MISO, INPUT_PULLUP);
     SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
 
+    pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
     pinMode(BOARD_TBOX_UP, INPUT_PULLUP);
     pinMode(BOARD_TBOX_DOWN, INPUT_PULLUP);
     pinMode(BOARD_TBOX_LEFT, INPUT_PULLUP);
@@ -616,10 +632,13 @@ void initBoard()
 
     Wire.beginTransmission(GT911_SLAVE_ADDRESS1);
     ret = Wire.endTransmission() == 0;
+    touchDected = ret;
+
+    kbDected = checkKb();
 
     setupLvgl();
 
-    //test image
+    // test image
     const lv_img_dsc_t *img_src[4] = {&image1, &image2, &image3, &image4};
     lv_obj_t *img = lv_img_create(lv_scr_act());
     lv_obj_t *label = lv_label_create(lv_scr_act());
@@ -666,10 +685,8 @@ void initBoard()
     snprintf(buf, 256, "%s:%s\n", "Decoder", ret == true ? "Successed" : "Failed");
     addMessage(buf);
 
-    Wire.beginTransmission(0x55);
-    ret = Wire.endTransmission() == 0;
-    Serial.print("Keyboard:"); Serial.println(ret);
-    snprintf(buf, 256, "%s:%s\n", "Keyboard", ret == true ? "Successed" : "Failed");
+    Serial.print("Keyboard:"); Serial.println(kbDected);
+    snprintf(buf, 256, "%s:%s\n", "Keyboard", kbDected == true ? "Successed" : "Failed");
     addMessage(buf);
 
 
@@ -745,6 +762,14 @@ void initBoard()
 
     xTaskCreate(taskplaySong, "play", 1024 * 4, NULL, 10, &playHandle);
 
+    i2s_driver_uninstall(I2S_CH);
+
+    pinMode(BOARD_BOOT_PIN, INPUT);
+
+    while (!digitalRead(BOARD_BOOT_PIN)) {
+        Serial.println("BOOT HAS PRESSED!!!"); delay(500);
+    }
+
     if (hasRadio) {
         if (sender) {
             transmissionState = radio.startTransmit("0");
@@ -761,13 +786,6 @@ void initBoard()
         }
     }
 
-    i2s_driver_uninstall(I2S_CH);
-
-    pinMode(BOARD_BOOT_PIN, INPUT);
-
-    while (!digitalRead(BOARD_BOOT_PIN)) {
-        Serial.println("BOOT HAS PRESSED!!!"); delay(500);
-    }
 
 }
 
@@ -904,7 +922,20 @@ static void keypad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
 void setupLvgl()
 {
     static lv_disp_draw_buf_t draw_buf;
+
+#ifndef BOARD_HAS_PSRAM
+#define LVGL_BUFFER_SIZE    ( TFT_HEIGHT * 100 )
     static lv_color_t buf[ LVGL_BUFFER_SIZE ];
+#else
+#define LVGL_BUFFER_SIZE    (TFT_WIDTH * TFT_HEIGHT * sizeof(lv_color_t))
+    static lv_color_t *buf = (lv_color_t *)ps_malloc(LVGL_BUFFER_SIZE);
+    if (!buf) {
+        Serial.println("menory alloc failed!");
+        delay(5000);
+        assert(buf);
+    }
+#endif
+
 
     String LVGL_Arduino = "Hello Arduino! ";
     LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
@@ -927,16 +958,21 @@ void setupLvgl()
     disp_drv.ver_res = TFT_WIDTH;
     disp_drv.flush_cb = disp_flush;
     disp_drv.draw_buf = &draw_buf;
+#ifdef BOARD_HAS_PSRAM
+    disp_drv.full_refresh = 1;
+#endif
     lv_disp_drv_register( &disp_drv );
 
     /*Initialize the  input device driver*/
 
     /*Register a touchscreen input device*/
-    static lv_indev_drv_t indev_touchpad;
-    lv_indev_drv_init( &indev_touchpad );
-    indev_touchpad.type = LV_INDEV_TYPE_POINTER;
-    indev_touchpad.read_cb = touchpad_read;
-    touch_indev = lv_indev_drv_register( &indev_touchpad );
+    if (touchDected) {
+        static lv_indev_drv_t indev_touchpad;
+        lv_indev_drv_init( &indev_touchpad );
+        indev_touchpad.type = LV_INDEV_TYPE_POINTER;
+        indev_touchpad.read_cb = touchpad_read;
+        touch_indev = lv_indev_drv_register( &indev_touchpad );
+    }
 
     /*Register a mouse input device*/
     static lv_indev_drv_t indev_mouse;
@@ -952,13 +988,16 @@ void setupLvgl()
     lv_img_set_src(cursor_obj, &mouse_cursor_icon);   /*Set the image source*/
     lv_indev_set_cursor(mouse_indev, cursor_obj);           /*Connect the image  object to the driver*/
 
-    /*Register a keypad input device*/
-    static lv_indev_drv_t indev_keypad;
-    lv_indev_drv_init(&indev_keypad);
-    indev_keypad.type = LV_INDEV_TYPE_KEYPAD;
-    indev_keypad.read_cb = keypad_read;
-    kb_indev = lv_indev_drv_register(&indev_keypad);
-    lv_indev_set_group(kb_indev, lv_group_get_default());
+    if (kbDected) {
+        Serial.println("Keyboard registered!!");
+        /*Register a keypad input device*/
+        static lv_indev_drv_t indev_keypad;
+        lv_indev_drv_init(&indev_keypad);
+        indev_keypad.type = LV_INDEV_TYPE_KEYPAD;
+        indev_keypad.read_cb = keypad_read;
+        kb_indev = lv_indev_drv_register(&indev_keypad);
+        lv_indev_set_group(kb_indev, lv_group_get_default());
+    }
 
 }
 

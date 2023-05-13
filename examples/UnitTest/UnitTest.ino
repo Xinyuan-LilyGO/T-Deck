@@ -40,6 +40,8 @@ LV_IMG_DECLARE(image1);
 LV_IMG_DECLARE(image2);
 LV_IMG_DECLARE(image3);
 LV_IMG_DECLARE(image4);
+LV_IMG_DECLARE(mouse_cursor_icon); /*Declare the image file.*/
+
 
 
 TouchLib touch(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, GT911_SLAVE_ADDRESS1);
@@ -274,41 +276,6 @@ bool setupCoder()
     ret_val |= es7210_adc_ctrl_state(cfg.codec_mode, AUDIO_HAL_CTRL_START);
     return ret_val == ESP_OK;
 
-}
-
-uint32_t loopSlide()
-{
-    static int16_t x = 0, y = 0;
-    const uint8_t dir_pins[4] = {BOARD_TBOX_UP,
-                                 BOARD_TBOX_DOWN,
-                                 BOARD_TBOX_LEFT,
-                                 BOARD_TBOX_RIGHT
-                                };
-    static bool last_dir[4];
-    for (int i = 0; i < 4; i++) {
-        bool dir = digitalRead(dir_pins[i]);
-        if (dir != last_dir[i]) {
-            last_dir[i] = dir;
-            switch (i) {
-            case 0:
-                Serial.println("up");
-                break;
-            case 1:
-                Serial.println("down");
-                break;
-            case 2:
-                Serial.println("left");
-                break;
-            case 3:
-                Serial.println("right");
-                break;
-            default:
-                break;
-            }
-            return i;
-        }
-    }
-    return 0xFF;
 }
 
 void taskplaySong(void *p)
@@ -845,23 +812,31 @@ static void mouse_read(lv_indev_drv_t *indev, lv_indev_data_t *data)
                                  BOARD_BOOT_PIN
                                 };
     static bool last_dir[5];
-    uint8_t pos = 50;
+    uint8_t pos = 10;
     for (int i = 0; i < 5; i++) {
         bool dir = digitalRead(dir_pins[i]);
         if (dir != last_dir[i]) {
             last_dir[i] = dir;
             switch (i) {
             case 0:
-                last_y += pos;
+                if (last_x < (lv_disp_get_hor_res(NULL) - mouse_cursor_icon.header.w)) {
+                    last_x += pos;
+                }
                 break;
             case 1:
-                last_y -= pos;
+                if (last_y > mouse_cursor_icon.header.h) {
+                    last_y -= pos;
+                }
                 break;
             case 2:
-                last_x -= pos;
+                if (last_x > mouse_cursor_icon.header.w) {
+                    last_x -= pos;
+                }
                 break;
             case 3:
-                last_x += pos;
+                if (last_y < (lv_disp_get_ver_res(NULL) - mouse_cursor_icon.header.h)) {
+                    last_y += pos;
+                }
                 break;
             case 4:
                 left_button_down = true;
@@ -871,8 +846,7 @@ static void mouse_read(lv_indev_drv_t *indev, lv_indev_data_t *data)
             }
         }
     }
-    last_y = constrain(last_y, 0, tft.height());
-    last_x = constrain(last_x, 0, tft.width());
+    // Serial.printf("indev:X:%04d  Y:%04d \n", last_x, last_y);
     /*Store the collected data*/
     data->point.x = last_x;
     data->point.y = last_y;
@@ -982,7 +956,6 @@ void setupLvgl()
     mouse_indev = lv_indev_drv_register( &indev_mouse );
     lv_indev_set_group(mouse_indev, lv_group_get_default());
 
-    LV_IMG_DECLARE(mouse_cursor_icon); /*Declare the image file.*/
     lv_obj_t *cursor_obj;
     cursor_obj = lv_img_create(lv_scr_act());         /*Create an image object for the cursor */
     lv_img_set_src(cursor_obj, &mouse_cursor_icon);   /*Set the image source*/

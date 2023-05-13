@@ -52,6 +52,9 @@ examples
 ## 3️⃣ Tips:
 
 1. If a microphone is used, the GPIOO button cannot be used
+2. If the sketch cannot be uploaded, then you need to press down the middle of the trackball, and then insert the USB, this means the chip is in the download mode, and then click to upload the sketch.
+3. The programming and burning interface of ESP32C3 is located at the 6Pin header on the side of the RST button, and the order starts from the top of the RST button, which are 3V3, GND, RST, BOOT, RX, TX
+
 
 ## 4️⃣ Where to buy:
 

@@ -6,6 +6,8 @@
  * @date      2023-04-11
  *
  */
+
+#ifdef CONFIG_IDF_TARGET_ESP32C3
 #define I2C_DEV_ADDR 0x55
 #define keyborad_BL_PIN  9
 #define SDA  2
@@ -276,3 +278,15 @@ void printMatrix()
         }
     }
 }
+#else
+#include <Arduino.h>
+void setup()
+{
+    Serial.begin(115200);
+}
+void loop()
+{
+    Serial.println("OSKETCH ONLY FOR LILYGO-KEYBOARD");
+    delay(1000);
+}
+#endif

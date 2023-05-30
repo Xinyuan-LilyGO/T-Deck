@@ -570,10 +570,10 @@ void initBoard()
     SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
 
     pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_UP, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_DOWN, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_LEFT, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_RIGHT, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G02, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G01, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G04, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G03, INPUT_PULLUP);
 
     //Wakeup touch chip
     pinMode(BOARD_TOUCH_INT, OUTPUT);
@@ -805,10 +805,10 @@ static void mouse_read(lv_indev_drv_t *indev, lv_indev_data_t *data)
     static  int16_t last_x;
     static int16_t last_y;
     bool left_button_down = false;
-    const uint8_t dir_pins[5] = {BOARD_TBOX_UP,
-                                 BOARD_TBOX_DOWN,
-                                 BOARD_TBOX_LEFT,
-                                 BOARD_TBOX_RIGHT,
+    const uint8_t dir_pins[5] = {BOARD_TBOX_G02,
+                                 BOARD_TBOX_G01,
+                                 BOARD_TBOX_G04,
+                                 BOARD_TBOX_G03,
                                  BOARD_BOOT_PIN
                                 };
     static bool last_dir[5];

@@ -37,10 +37,10 @@
 #define BOARD_SPI_SCK       40
 
 #define BOARD_BOOT          0
-#define BOARD_TBOX_UP       3
-#define BOARD_TBOX_DOWN     2
-#define BOARD_TBOX_LEFT     1
-#define BOARD_TBOX_RIGHT    15
+#define BOARD_TBOX_G02       3
+#define BOARD_TBOX_G01     2
+#define BOARD_TBOX_G04     1
+#define BOARD_TBOX_G03    15
 
 #define BOARD_ES7210_MCLK   48
 #define BOARD_ES7210_LRCK   21

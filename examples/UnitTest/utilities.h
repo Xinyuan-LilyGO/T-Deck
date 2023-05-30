@@ -36,19 +36,19 @@
 #define BOARD_SPI_MISO      38
 #define BOARD_SPI_SCK       40
 
-#define BOARD_TBOX_UP       2
-#define BOARD_TBOX_DOWN     3
-#define BOARD_TBOX_LEFT     1
-#define BOARD_TBOX_RIGHT    15
+#define BOARD_TBOX_G02      2
+#define BOARD_TBOX_G01      3
+#define BOARD_TBOX_G04      1
+#define BOARD_TBOX_G03      15
 
 #define BOARD_ES7210_MCLK   48
 #define BOARD_ES7210_LRCK   21
 #define BOARD_ES7210_SCK    47
 #define BOARD_ES7210_DIN    14
 
-#define RADIO_BUSY_PIN    13
-#define RADIO_RST_PIN     17
-#define RADIO_DIO1_PIN    45
+#define RADIO_BUSY_PIN      13
+#define RADIO_RST_PIN       17
+#define RADIO_DIO1_PIN      45
 
 #define BOARD_BOOT_PIN      0
 

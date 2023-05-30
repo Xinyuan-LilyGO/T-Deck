@@ -8,14 +8,16 @@
 
 ## 1️⃣ 示例预览
 
-```
+````
 
 examples 
 ├─Keyboard_ESP32C3       # ESP32C3 keyboard I2C slave
+├─Keyboard_T_Deck_Master # T-Deck read from keyboard
 ├─Microphone             # Noise detection  
-└─UnitTest               # Factory hardware unit testing         
+├─Touchpad               # Read touch coordinates 
+└─UnitTest               # Factory hardware unit testing           
 
-```
+````
 
 
 ## 2️⃣ 快速开始

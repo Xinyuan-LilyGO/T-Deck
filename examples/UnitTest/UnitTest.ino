@@ -4,7 +4,17 @@
  * @license   MIT
  * @copyright Copyright (c) 2023  Shenzhen Xin Yuan Electronic Technology Co., Ltd
  * @date      2023-04-11
- *
+ * @note      Arduino Setting
+ *            Tools ->
+ *                  Board:"ESP32S3 Dev Module"
+ *                  USB CDC On Boot:"Enable"
+ *                  USB DFU On Boot:"Disable"
+ *                  Flash Size : "16MB(128Mb)"
+ *                  Flash Mode"QIO 80MHz
+ *                  Partition Scheme:"16M Flash(3M APP/9.9MB FATFS)"
+ *                  PSRAM:"OPI PSRAM"
+ *                  Upload Mode:"UART0/Hardware CDC"
+ *                  USB Mode:"Hardware CDC and JTAG"
  */
 #include <Arduino.h>
 #include <SPI.h>
@@ -53,6 +63,9 @@ SX1262 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUS
 #define RADIO_FREQ          433.0
 SX1268 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUSY_PIN);
 #endif
+
+void handleEvent(AceButton * /* button */, uint8_t eventType,
+                 uint8_t /* buttonState */);
 
 TFT_eSPI        tft;
 Audio           audio;

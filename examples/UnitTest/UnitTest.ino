@@ -559,6 +559,25 @@ bool checkKb()
     return Wire.read() != -1;
 }
 
+void disp_inver_event(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED)return;
+    uint8_t *index =  (uint8_t *) lv_event_get_user_data(e);
+    if (!index)return;
+    switch (*index) {
+    case 0:
+    case 1:
+        tft.invertDisplay(*index);
+        break;
+    case 2:
+        clicked = true;
+        break;
+    default:
+        break;
+    }
+}
+
+
 void initBoard()
 {
     bool ret = 0;
@@ -603,6 +622,7 @@ void initBoard()
     tft.fillScreen(TFT_BLACK);
     Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
+
     // Set touch int input
     pinMode(BOARD_TOUCH_INT, INPUT); delay(20);
 
@@ -618,15 +638,64 @@ void initBoard()
 
     setupLvgl();
 
+    // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
+    // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
+    // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
+    // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
+    lv_obj_t *cont = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(cont, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL));
+    lv_obj_set_scroll_dir(cont, LV_DIR_VER);
+
+    lv_obj_t *label;
+    label = lv_label_create(cont);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL);
+    lv_obj_set_width(label, 320);
+    lv_label_set_text(label, "The button is blue, if the button is not blue, please press \"Invert OFF\" or \"Invert ON\" Button");
+    lv_obj_align(label, LV_ALIGN_TOP_LEFT, 0, 10);
+
+    static uint8_t invertFlag[3] = {0, 1, 2};
+    lv_obj_t *btn = lv_btn_create(cont);
+    lv_obj_set_size(btn, LV_PCT(50), LV_PCT(40));
+    lv_obj_t *btn_label = lv_label_create(btn);
+    lv_label_set_text(btn_label, "Invert ON");
+    lv_obj_center(btn_label);
+    lv_obj_add_event_cb(btn, disp_inver_event, LV_EVENT_ALL, &invertFlag[0]);
+    lv_obj_align_to(btn, label, LV_ALIGN_OUT_BOTTOM_LEFT, 5, 10);
+
+    btn = lv_btn_create(cont);
+    lv_obj_set_size(btn, LV_PCT(50), LV_PCT(40));
+    btn_label = lv_label_create(btn);
+    lv_label_set_text(btn_label, "Invert OFF");
+    lv_obj_center(btn_label);
+    lv_obj_add_event_cb(btn, disp_inver_event, LV_EVENT_ALL, &invertFlag[1]);
+    lv_obj_align_to(btn, label, LV_ALIGN_OUT_BOTTOM_RIGHT, -20, 10);
+
+
+    btn = lv_btn_create(cont);
+    lv_obj_set_size(btn, LV_PCT(50), LV_PCT(20));
+    btn_label = lv_label_create(btn);
+    lv_label_set_text(btn_label, "OK");
+    lv_obj_center(btn_label);
+    lv_obj_add_event_cb(btn, disp_inver_event, LV_EVENT_ALL, &invertFlag[2]);
+    lv_obj_align_to(btn, label, LV_ALIGN_OUT_BOTTOM_MID, -10, LV_PCT(40));
+
+    clicked = false;
+    while (!clicked) {
+        lv_task_handler(); delay(5);
+    }
+
+    lv_obj_del(cont);
+
     // test image
     const lv_img_dsc_t *img_src[4] = {&image1, &image2, &image3, &image4};
     lv_obj_t *img = lv_img_create(lv_scr_act());
-    lv_obj_t *label = lv_label_create(lv_scr_act());
+    label = lv_label_create(lv_scr_act());
     lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL);
     lv_obj_set_width(label, 320);
     lv_label_set_text(label, "Press the key of the trackball in the middle of the board to enter the next picture");
     lv_obj_align(label, LV_ALIGN_TOP_LEFT, 0, 0);
 
+    clicked = false;
     int i = 3;
     while (i > 0) {
         lv_img_set_src(img, (void *)(img_src[i]));

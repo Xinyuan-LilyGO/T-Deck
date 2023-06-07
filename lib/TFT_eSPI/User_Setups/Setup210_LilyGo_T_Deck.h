@@ -12,7 +12,7 @@
 #define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
 
 // #define TFT_INVERSION_ON
-#define TFT_INVERSION_OFF
+// #define TFT_INVERSION_OFF  //For the first sample of T-Deck need to turn on color inversion
 
 // DSTIKE stepup
 //#define TFT_DC    23

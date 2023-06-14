@@ -96,6 +96,7 @@ lv_group_t  *kb_indev_group;
 lv_obj_t    *hw_ta;
 lv_obj_t    *radio_ta;
 lv_obj_t    *tv ;
+SemaphoreHandle_t xSemaphore = NULL;
 
 
 void setupLvgl();
@@ -294,17 +295,20 @@ bool setupCoder()
 void taskplaySong(void *p)
 {
     while (1) {
-        if (SD.exists("/key.mp3")) {
-            const char *path = "key.mp3";
-            audio.setPinout(BOARD_I2S_BCK, BOARD_I2S_WS, BOARD_I2S_DOUT);
-            audio.setVolume(12);
-            audio.connecttoFS(SD, path);
-            Serial.printf("play %s\r\n", path);
-            while (audio.isRunning()) {
-                audio.loop();
+        if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
+            if (SD.exists("/key.mp3")) {
+                const char *path = "key.mp3";
+                audio.setPinout(BOARD_I2S_BCK, BOARD_I2S_WS, BOARD_I2S_DOUT);
+                audio.setVolume(12);
+                audio.connecttoFS(SD, path);
+                Serial.printf("play %s\r\n", path);
+                while (audio.isRunning()) {
+                    audio.loop();
+                }
+                audio.stopSong();
             }
+            xSemaphoreGive( xSemaphore );
         }
-        audio.stopSong();
         vTaskSuspend(NULL);
     }
 }
@@ -325,120 +329,123 @@ void loopRadio()
         lv_textarea_set_text(radio_ta, "Radio not online !");
         return ;
     }
+    if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
+        digitalWrite(BOARD_SDCARD_CS, HIGH);
+        digitalWrite(RADIO_CS_PIN, HIGH);
+        digitalWrite(BOARD_TFT_CS, HIGH);
 
-    digitalWrite(BOARD_SDCARD_CS, HIGH);
-    digitalWrite(RADIO_CS_PIN, HIGH);
-    digitalWrite(BOARD_TFT_CS, HIGH);
+        char buf[256];
+        if (lv_tabview_get_tab_act(tv) != 1) {
+            xSemaphoreGive( xSemaphore );
+            return ;
+        }
+        if (strlen(lv_textarea_get_text(radio_ta)) >= lv_textarea_get_max_length(radio_ta)) {
+            lv_textarea_set_text(radio_ta, "");
+        }
 
-    char buf[256];
-    if (lv_tabview_get_tab_act(tv) != 1) {
-        return ;
-    }
-    if (strlen(lv_textarea_get_text(radio_ta)) >= lv_textarea_get_max_length(radio_ta)) {
-        lv_textarea_set_text(radio_ta, "");
-    }
+        if (sender) {
+            // Send data every 200 ms
+            if (millis() - runningMillis > 1000) {
+                // check if the previous transmission finished
+                if (transmissionFlag) {
+                    // disable the interrupt service routine while
+                    // processing the data
+                    enableInterrupt = false;
+                    // reset flag
+                    transmissionFlag = false;
 
-    if (sender) {
-        // Send data every 200 ms
-        if (millis() - runningMillis > 1000) {
-            // check if the previous transmission finished
+                    if (transmissionState == RADIOLIB_ERR_NONE) {
+                        // packet was successfully sent
+                        Serial.println(F("transmission finished!"));
+                        // NOTE: when using interrupt-driven transmit method,
+                        //       it is not possible to automatically measure
+                        //       transmission data rate using getDataRate()
+                    } else {
+                        Serial.print(F("failed, code "));
+                        Serial.println(transmissionState);
+                    }
+
+                    snprintf(buf, 256, "[ %u ]TX %u finished\n", millis() / 1000, sendCount);
+                    lv_textarea_add_text(radio_ta, buf);
+
+                    Serial.println(buf);
+
+                    // you can also transmit byte array up to 256 bytes long
+                    transmissionState = radio.startTransmit(String(sendCount++).c_str());
+
+                    // we're ready to send more packets,
+                    // enable interrupt service routine
+                    enableInterrupt = true;
+                }
+                // snprintf(dispSenderBuff, sizeof(dispSenderBuff), "TX: %u", sendCount);
+
+                runningMillis = millis();
+            }
+        } else {
+
+            String recv;
+
+            // check if the flag is set
             if (transmissionFlag) {
                 // disable the interrupt service routine while
                 // processing the data
                 enableInterrupt = false;
+
                 // reset flag
                 transmissionFlag = false;
 
-                if (transmissionState == RADIOLIB_ERR_NONE) {
-                    // packet was successfully sent
-                    Serial.println(F("transmission finished!"));
-                    // NOTE: when using interrupt-driven transmit method,
-                    //       it is not possible to automatically measure
-                    //       transmission data rate using getDataRate()
+                // you can read received data as an Arduino String
+                // int state = radio.readData(recv);
+
+                // you can also read received data as byte array
+                /*
+                */
+                int state = radio.readData(recv);
+                if (state == RADIOLIB_ERR_NONE) {
+
+
+                    // packet was successfully received
+                    Serial.print(F("[RADIO] Received packet!"));
+
+                    // print data of the packet
+                    Serial.print(F(" Data:"));
+                    Serial.print(recv);
+
+                    // print RSSI (Received Signal Strength Indicator)
+                    Serial.print(F(" RSSI:"));
+                    Serial.print(radio.getRSSI());
+                    Serial.print(F(" dBm"));
+                    // snprintf(dispRecvicerBuff[1], sizeof(dispRecvicerBuff[1]), "RSSI:%.2f dBm", radio.getRSSI());
+
+                    // print SNR (Signal-to-Noise Ratio)
+                    Serial.print(F("  SNR:"));
+                    Serial.print(radio.getSNR());
+                    Serial.println(F(" dB"));
+
+
+                    snprintf(buf, 256, "RX:%s RSSI:%.2f SNR:%.2f\n", recv.c_str(), radio.getRSSI(), radio.getSNR());
+
+                    lv_textarea_add_text(radio_ta, buf);
+
+
+                } else if (state ==  RADIOLIB_ERR_CRC_MISMATCH) {
+                    // packet was received, but is malformed
+                    Serial.println(F("CRC error!"));
+
                 } else {
+                    // some other error occurred
                     Serial.print(F("failed, code "));
-                    Serial.println(transmissionState);
+                    Serial.println(state);
                 }
+                // put module back to listen mode
+                radio.startReceive();
 
-                snprintf(buf, 256, "[ %u ]TX %u finished\n", millis() / 1000, sendCount);
-                lv_textarea_add_text(radio_ta, buf);
-
-                Serial.println(buf);
-
-                // you can also transmit byte array up to 256 bytes long
-                transmissionState = radio.startTransmit(String(sendCount++).c_str());
-
-                // we're ready to send more packets,
+                // we're ready to receive more packets,
                 // enable interrupt service routine
                 enableInterrupt = true;
             }
-            // snprintf(dispSenderBuff, sizeof(dispSenderBuff), "TX: %u", sendCount);
-
-            runningMillis = millis();
         }
-    } else {
-
-        String recv;
-
-        // check if the flag is set
-        if (transmissionFlag) {
-            // disable the interrupt service routine while
-            // processing the data
-            enableInterrupt = false;
-
-            // reset flag
-            transmissionFlag = false;
-
-            // you can read received data as an Arduino String
-            // int state = radio.readData(recv);
-
-            // you can also read received data as byte array
-            /*
-            */
-            int state = radio.readData(recv);
-            if (state == RADIOLIB_ERR_NONE) {
-
-
-                // packet was successfully received
-                Serial.print(F("[RADIO] Received packet!"));
-
-                // print data of the packet
-                Serial.print(F(" Data:"));
-                Serial.print(recv);
-
-                // print RSSI (Received Signal Strength Indicator)
-                Serial.print(F(" RSSI:"));
-                Serial.print(radio.getRSSI());
-                Serial.print(F(" dBm"));
-                // snprintf(dispRecvicerBuff[1], sizeof(dispRecvicerBuff[1]), "RSSI:%.2f dBm", radio.getRSSI());
-
-                // print SNR (Signal-to-Noise Ratio)
-                Serial.print(F("  SNR:"));
-                Serial.print(radio.getSNR());
-                Serial.println(F(" dB"));
-
-
-                snprintf(buf, 256, "RX:%s RSSI:%.2f SNR:%.2f\n", recv.c_str(), radio.getRSSI(), radio.getSNR());
-
-                lv_textarea_add_text(radio_ta, buf);
-
-
-            } else if (state ==  RADIOLIB_ERR_CRC_MISMATCH) {
-                // packet was received, but is malformed
-                Serial.println(F("CRC error!"));
-
-            } else {
-                // some other error occurred
-                Serial.print(F("failed, code "));
-                Serial.println(state);
-            }
-            // put module back to listen mode
-            radio.startReceive();
-
-            // we're ready to receive more packets,
-            // enable interrupt service routine
-            enableInterrupt = true;
-        }
+        xSemaphoreGive( xSemaphore );
     }
 }
 
@@ -616,6 +623,11 @@ void initBoard()
     buttonConfig->setEventHandler(handleEvent);
     buttonConfig->setFeature(ButtonConfig::kFeatureClick);
     buttonConfig->setFeature(ButtonConfig::kFeatureLongPress);
+
+    //Add mutex to allow multitasking access
+    xSemaphore = xSemaphoreCreateBinary();
+    assert(xSemaphore);
+    xSemaphoreGive( xSemaphore );
 
     tft.begin();
     tft.setRotation( 1 );
@@ -808,9 +820,6 @@ void initBoard()
         delay(5);
     }
 
-
-    xTaskCreate(taskplaySong, "play", 1024 * 4, NULL, 10, &playHandle);
-
     i2s_driver_uninstall(I2S_CH);
 
     pinMode(BOARD_BOOT_PIN, INPUT);
@@ -819,22 +828,26 @@ void initBoard()
         Serial.println("BOOT HAS PRESSED!!!"); delay(500);
     }
 
-    if (hasRadio) {
-        if (sender) {
-            transmissionState = radio.startTransmit("0");
-            sendCount = 0;
-            Serial.println("startTransmit!!!!");
-        } else {
-            int state = radio.startReceive();
-            if (state == RADIOLIB_ERR_NONE) {
-                Serial.println(F("success!"));
+    if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
+        if (hasRadio) {
+            if (sender) {
+                transmissionState = radio.startTransmit("0");
+                sendCount = 0;
+                Serial.println("startTransmit!!!!");
             } else {
-                Serial.print(F("failed, code "));
-                Serial.println(state);
+                int state = radio.startReceive();
+                if (state == RADIOLIB_ERR_NONE) {
+                    Serial.println(F("success!"));
+                } else {
+                    Serial.print(F("failed, code "));
+                    Serial.println(state);
+                }
             }
         }
+        xSemaphoreGive( xSemaphore );
     }
 
+    xTaskCreate(taskplaySong, "play", 1024 * 4, NULL, 10, &playHandle);
 
 }
 
@@ -845,11 +858,14 @@ static void disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *
 {
     uint32_t w = ( area->x2 - area->x1 + 1 );
     uint32_t h = ( area->y2 - area->y1 + 1 );
-    tft.startWrite();
-    tft.setAddrWindow( area->x1, area->y1, w, h );
-    tft.pushColors( ( uint16_t * )&color_p->full, w * h, false );
-    tft.endWrite();
-    lv_disp_flush_ready( disp );
+    if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
+        tft.startWrite();
+        tft.setAddrWindow( area->x1, area->y1, w, h );
+        tft.pushColors( ( uint16_t * )&color_p->full, w * h, false );
+        tft.endWrite();
+        lv_disp_flush_ready( disp );
+        xSemaphoreGive( xSemaphore );
+    }
 }
 
 

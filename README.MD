@@ -60,8 +60,8 @@ examples
 
 ## 4️⃣ Where to buy:
 
-1. [AliExpress]()
-2. [LilyGo Store]()
+1. [AliExpress](https://www.aliexpress.com/item/1005005692235592.html)
+2. [LilyGo Store](https://www.lilygo.cc/products/t-deck)
 
 
 

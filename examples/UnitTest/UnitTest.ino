@@ -54,7 +54,7 @@ LV_IMG_DECLARE(mouse_cursor_icon); /*Declare the image file.*/
 
 
 
-TouchLib touch(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, GT911_SLAVE_ADDRESS1);
+TouchLib *touch = NULL;
 
 #ifdef USING_SX1262
 #define RADIO_FREQ          868.0
@@ -87,7 +87,7 @@ bool        kbDected = false;
 bool        sender = true;
 uint32_t    sendCount = 0;
 uint32_t    runningMillis = 0;
-
+uint8_t     touchAddress = GT911_SLAVE_ADDRESS2;
 
 lv_indev_t  *kb_indev = NULL;
 lv_indev_t  *mouse_indev = NULL;
@@ -130,6 +130,13 @@ void scanDevices(TwoWire *w)
             Serial.print(addr, HEX);
             Serial.println(" !");
 
+            if (addr == GT911_SLAVE_ADDRESS2) {
+                touchAddress = GT911_SLAVE_ADDRESS2;
+                Serial.println("Find GT911 Drv Slave address: 0x14");
+            } else if (addr == GT911_SLAVE_ADDRESS1) {
+                touchAddress = GT911_SLAVE_ADDRESS1;
+                Serial.println("Find GT911 Drv Slave address: 0x5D");
+            }
         } else if (err == 4) {
             Serial.print("Unknow error at address 0x");
             if (addr < 16) {
@@ -638,11 +645,15 @@ void initBoard()
     // Set touch int input
     pinMode(BOARD_TOUCH_INT, INPUT); delay(20);
 
+    // Two touch screens, the difference between them is the device address,
+    // use ScanDevices to get the existing I2C address
     scanDevices(&Wire);
 
-    touch.init();
+    touch = new TouchLib(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, touchAddress);
 
-    Wire.beginTransmission(GT911_SLAVE_ADDRESS1);
+    touch->init();
+
+    Wire.beginTransmission(touchAddress);
     ret = Wire.endTransmission() == 0;
     touchDected = ret;
 
@@ -872,10 +883,10 @@ static void disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *
 static bool getTouch(int16_t &x, int16_t &y)
 {
     uint8_t rotation = tft.getRotation();
-    if (!touch.read()) {
+    if (!touch->read()) {
         return false;
     }
-    TP_Point t = touch.getPoint(0);
+    TP_Point t = touch->getPoint(0);
     switch (rotation) {
     case 1:
         x = t.y;
@@ -1101,7 +1112,7 @@ void handleEvent(AceButton * /* button */, uint8_t eventType,
         // When sleeping, set the touch and display screen to sleep, and all other peripherals will be powered off
         pinMode(BOARD_TOUCH_INT, OUTPUT);
         digitalWrite(BOARD_TOUCH_INT, LOW); //Before touch to set sleep, it is necessary to set INT to LOW
-        touch.enableSleep();        //set touchpad enter sleep mode
+        touch->enableSleep();        //set touchpad enter sleep mode
         tft.writecommand(0x10);     //set disaplay enter sleep mode
         delay(2000);
         esp_sleep_enable_ext1_wakeup(1ull << BOARD_BOOT_PIN, ESP_EXT1_WAKEUP_ALL_LOW);

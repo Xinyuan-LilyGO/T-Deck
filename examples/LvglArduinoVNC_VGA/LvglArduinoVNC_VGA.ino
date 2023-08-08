@@ -434,6 +434,9 @@ void setup()
   // Init touch device
   touch_init(gfx->width(), gfx->height(), gfx->getRotation());
 
+  // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
+  gfx->invertDisplay(true);
+
   // Init keyboard device
   keyboard_init();
 

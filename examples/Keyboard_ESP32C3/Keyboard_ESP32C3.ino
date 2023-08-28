@@ -127,7 +127,7 @@ void setup()
 
     Serial.setDebugOutput(true);
     Wire.onRequest(onRequest);
-    Wire.begin((uint8_t)I2C_DEV_ADDR, SDA, SCL);
+    Wire.begin((uint8_t)I2C_DEV_ADDR, SDA, SCL, 0);
 
     Serial.println("Starting keyboard work!");
     pinMode(keyborad_BL_PIN, OUTPUT);

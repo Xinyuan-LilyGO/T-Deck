@@ -47,7 +47,9 @@ examples
 1. If a microphone is used, the GPIOO button cannot be used
 2. If the sketch cannot be uploaded, then you need to press down the middle of the trackball, and then insert the USB, this means the chip is in the download mode, and then click to upload the sketch.
 3. T-Keyboard the programming and burning interface of ESP32C3 is located at the 6Pin header on the side of the RST button, and the order starts from the top of the RST button, which are 3V3, GND, RST, BOOT, RX, TX, You need to connect USB TO TTL externally to burn the keyboard firmware. For TTL without automatic download circuit, before powering on, short-circuit the BOOT Pin and GND, and then power on. At this time, T-Keyboard will enter the download mode. After the burning is completed, you need to disconnect GND and BOOT before running the program.
+
    ![c3_boot](images/c3_boot.jpg)
+
 4. T-Deck can't upload any sketch，Please enter the upload mode manually.
    1. Connect the board via the USB cable
    2. Press and hold the BOOT button , While still pressing the BOOT(On the trackball above the keyboard, press down) button

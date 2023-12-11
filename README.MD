@@ -55,7 +55,7 @@ examples
    2. Press and hold the BOOT button , While still pressing the BOOT(On the trackball above the keyboard, press down) button
    3. Press RST button
    4. Release the RST button
-   5. Release the BOOT button (If there is no BOOT button, disconnect IO0 from GND.)
+   5. Release the BOOT button
    6. Upload sketch
 
 ## 4️⃣ Where to buy:

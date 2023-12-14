@@ -30,43 +30,61 @@
 #define TOUCH_MODULES_GT911
 #include "TouchLib.h"
 #include "utilities.h"
-#include "AceButton.h"
 
+#if TFT_DC !=  BOARD_TFT_DC || TFT_CS !=  BOARD_TFT_CS || TFT_MOSI !=  BOARD_SPI_MOSI || TFT_SCLK !=  BOARD_SPI_SCK
+#error "Not using the already configured T-Deck file, please remove <Arduino/libraries/TFT_eSPI> and replace with <lib/TFT_eSPI>, please do not click the upgrade library button when opening sketches in ArduinoIDE versions 2.0 and above, otherwise the original configuration file will be replaced !!!"
+#error "Not using the already configured T-Deck file, please remove <Arduino/libraries/TFT_eSPI> and replace with <lib/TFT_eSPI>, please do not click the upgrade library button when opening sketches in ArduinoIDE versions 2.0 and above, otherwise the original configuration file will be replaced !!!"
+#error "Not using the already configured T-Deck file, please remove <Arduino/libraries/TFT_eSPI> and replace with <lib/TFT_eSPI>, please do not click the upgrade library button when opening sketches in ArduinoIDE versions 2.0 and above, otherwise the original configuration file will be replaced !!!"
+#endif
 
-using namespace ace_button;
+#ifndef BOARD_HAS_PSRAM
+#error "Detected that PSRAM is not turned on. Please set PSRAM to OPI PSRAM in ArduinoIDE"
+#endif
 
+#ifndef RADIO_FREQ
+#define RADIO_FREQ                  868.0
+#endif
 
-#define USING_SX1262
+#define DEFAULT_COLOR               (lv_color_make(252, 218, 72))
+#define MIC_I2S_SAMPLE_RATE         16000
+#define MIC_I2S_PORT                I2S_NUM_1
+#define SPK_I2S_PORT                I2S_NUM_0
+#define VAD_SAMPLE_RATE_HZ          16000
+#define VAD_FRAME_LENGTH_MS         30
+#define VAD_BUFFER_LENGTH           (VAD_FRAME_LENGTH_MS * VAD_SAMPLE_RATE_HZ / 1000)
+#define LVGL_BUFFER_SIZE            (TFT_WIDTH * TFT_HEIGHT * sizeof(lv_color_t))
 
-
-
-#define VAD_SAMPLE_RATE_HZ              16000
-#define VAD_FRAME_LENGTH_MS             30
-#define VAD_BUFFER_LENGTH               (VAD_FRAME_LENGTH_MS * VAD_SAMPLE_RATE_HZ / 1000)
-#define I2S_CH                          I2S_NUM_1
+LV_IMG_DECLARE(image_output);
 
 LV_IMG_DECLARE(image);
 LV_IMG_DECLARE(image1);
 LV_IMG_DECLARE(image2);
 LV_IMG_DECLARE(image3);
 LV_IMG_DECLARE(image4);
-LV_IMG_DECLARE(mouse_cursor_icon); /*Declare the image file.*/
+LV_IMG_DECLARE(image_emoji);
 
 
+enum DemoEvent {
+    DEMO_TX_BTN_CLICK_EVENT,
+    DEMO_RX_BTN_CLICK_EVENT,
+    DEMO_CLEAN_BTN_CLICK_EVENT,
+    DEMO_VAD_BTN_CLICK_EVENT,
+    DEMO_PLAY_BTN_CLICK_EVENT,
+    DEMO_SLEEP_BTN_CLICK_EVENT
+};
+
+
+static const DemoEvent event[] = {
+    DEMO_TX_BTN_CLICK_EVENT,
+    DEMO_RX_BTN_CLICK_EVENT,
+    DEMO_CLEAN_BTN_CLICK_EVENT,
+    DEMO_VAD_BTN_CLICK_EVENT,
+    DEMO_PLAY_BTN_CLICK_EVENT,
+    DEMO_SLEEP_BTN_CLICK_EVENT,
+};
 
 TouchLib *touch = NULL;
-
-#ifdef USING_SX1262
-#define RADIO_FREQ          868.0
 SX1262 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUSY_PIN);
-#else
-#define RADIO_FREQ          433.0
-SX1268 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUSY_PIN);
-#endif
-
-void handleEvent(AceButton * /* button */, uint8_t eventType,
-                 uint8_t /* buttonState */);
-
 TFT_eSPI        tft;
 Audio           audio;
 size_t          bytes_read;
@@ -76,8 +94,10 @@ vad_handle_t    vad_inst;
 TaskHandle_t    playHandle = NULL;
 TaskHandle_t    radioHandle = NULL;
 
-AceButton   button;
-bool        clicked = false;
+const size_t vad_buffer_size = VAD_BUFFER_LENGTH * sizeof(short);
+static lv_obj_t *vad_btn_label;
+static uint32_t vad_detected_counter = 0;
+static TaskHandle_t vadTaskHandler;
 bool        transmissionFlag = true;
 bool        enableInterrupt = true;
 int         transmissionState ;
@@ -85,6 +105,7 @@ bool        hasRadio = false;
 bool        touchDected = false;
 bool        kbDected = false;
 bool        sender = true;
+bool        enterSleep = false;
 uint32_t    sendCount = 0;
 uint32_t    runningMillis = 0;
 uint8_t     touchAddress = GT911_SLAVE_ADDRESS2;
@@ -93,13 +114,40 @@ lv_indev_t  *kb_indev = NULL;
 lv_indev_t  *mouse_indev = NULL;
 lv_indev_t  *touch_indev = NULL;
 lv_group_t  *kb_indev_group;
-lv_obj_t    *hw_ta;
 lv_obj_t    *radio_ta;
-lv_obj_t    *tv ;
+lv_obj_t *main_count;
 SemaphoreHandle_t xSemaphore = NULL;
 
-
 void setupLvgl();
+
+// LilyGo  T-Deck  control backlight chip has 16 levels of adjustment range
+// The adjustable range is 0~15, 0 is the minimum brightness, 15 is the maximum brightness
+void setBrightness(uint8_t value)
+{
+    static uint8_t level = 0;
+    static uint8_t steps = 16;
+    if (value == 0) {
+        digitalWrite(BOARD_BL_PIN, 0);
+        delay(3);
+        level = 0;
+        return;
+    }
+    if (level == 0) {
+        digitalWrite(BOARD_BL_PIN, 1);
+        level = steps;
+        delayMicroseconds(30);
+    }
+    int from = steps - level;
+    int to = steps - value;
+    int num = (steps + to - from) % steps;
+    for (int i = 0; i < num; i++) {
+        digitalWrite(BOARD_BL_PIN, 0);
+        digitalWrite(BOARD_BL_PIN, 1);
+    }
+    level = value;
+}
+
+
 
 
 void setFlag(void)
@@ -174,8 +222,8 @@ bool setupRadio()
         return false;
     }
 
-    // set bandwidth to 250 kHz
-    if (radio.setBandwidth(250.0) == RADIOLIB_ERR_INVALID_BANDWIDTH) {
+    // set bandwidth to 125 kHz
+    if (radio.setBandwidth(125.0) == RADIOLIB_ERR_INVALID_BANDWIDTH) {
         Serial.println(F("Selected bandwidth is invalid for this module!"));
         return false;
     }
@@ -303,30 +351,10 @@ void taskplaySong(void *p)
 {
     while (1) {
         if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
-            if (SD.exists("/key.mp3")) {
-                const char *path = "key.mp3";
-                audio.setPinout(BOARD_I2S_BCK, BOARD_I2S_WS, BOARD_I2S_DOUT);
-                audio.setVolume(12);
-                audio.connecttoFS(SD, path);
-                Serial.printf("play %s\r\n", path);
-                while (audio.isRunning()) {
-                    audio.loop();
-                }
-                audio.stopSong();
-            }
+            playTTS("hello.mp3");
             xSemaphoreGive( xSemaphore );
         }
         vTaskSuspend(NULL);
-    }
-}
-
-void addMessage(const char *str)
-{
-    lv_textarea_add_text(hw_ta, str);
-    uint32_t run = millis() + 200;
-    while (millis() < run) {
-        lv_task_handler();
-        delay(5);
     }
 }
 
@@ -342,10 +370,7 @@ void loopRadio()
         digitalWrite(BOARD_TFT_CS, HIGH);
 
         char buf[256];
-        if (lv_tabview_get_tab_act(tv) != 1) {
-            xSemaphoreGive( xSemaphore );
-            return ;
-        }
+
         if (strlen(lv_textarea_get_text(radio_ta)) >= lv_textarea_get_max_length(radio_ta)) {
             lv_textarea_set_text(radio_ta, "");
         }
@@ -373,7 +398,8 @@ void loopRadio()
                     }
 
                     snprintf(buf, 256, "[ %u ]TX %u finished\n", millis() / 1000, sendCount);
-                    lv_textarea_add_text(radio_ta, buf);
+                    lv_textarea_set_text(radio_ta, buf);
+                    lv_obj_add_state(radio_ta, LV_STATE_FOCUSED);
 
                     Serial.println(buf);
 
@@ -432,8 +458,8 @@ void loopRadio()
 
                     snprintf(buf, 256, "RX:%s RSSI:%.2f SNR:%.2f\n", recv.c_str(), radio.getRSSI(), radio.getSNR());
 
-                    lv_textarea_add_text(radio_ta, buf);
-
+                    lv_textarea_set_text(radio_ta, buf);
+                    lv_obj_add_state(radio_ta, LV_STATE_FOCUSED);
 
                 } else if (state ==  RADIOLIB_ERR_CRC_MISMATCH) {
                     // packet was received, but is malformed
@@ -456,326 +482,79 @@ void loopRadio()
     }
 }
 
-static void event_handler(lv_event_t *e)
+void serialToScreen(lv_obj_t *parent, String string,  bool result)
 {
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *obj = lv_event_get_target(e);
-    if (code == LV_EVENT_VALUE_CHANGED) {
-        Serial.printf("State: %s\n", lv_obj_has_state(obj, LV_STATE_CHECKED) ? "On" : "Off");
-        if (hasRadio) {
-            if (lv_obj_has_state(obj, LV_STATE_CHECKED)) {
-                // RX
-                lv_textarea_set_text(radio_ta, "");
-                Serial.print(F("[Radio] Starting to listen ... "));
-                int state = radio.startReceive();
-                if (state == RADIOLIB_ERR_NONE) {
-                    Serial.println(F("success!"));
-                } else {
-                    Serial.print(F("failed, code "));
-                    Serial.println(state);
-                }
-                sender = !sender;
-            } else {
-                // TX
-                lv_textarea_set_text(radio_ta, "");
-                // send the first packet on this node
-                Serial.print(F("[Radio] Sending first packet ... "));
-                transmissionState = radio.startTransmit("Hello World!");
-                sender = !sender;
-            }
-        } else {
-            lv_textarea_set_text(radio_ta, "Radio is not online");
-        }
+    lv_obj_t *cont = lv_obj_create(parent);
+    lv_obj_set_scroll_dir(cont, LV_DIR_NONE);
+    lv_obj_set_size(cont, LV_PCT(100), lv_font_get_line_height(&lv_font_montserrat_28) + 2 );
+
+    lv_obj_t *label1 = lv_label_create(cont);
+    lv_label_set_recolor(label1, true);
+    lv_label_set_text(label1, string.c_str());
+    lv_obj_align(label1, LV_ALIGN_LEFT_MID, 0, 0);
+
+    lv_obj_t *label = lv_label_create(cont);
+    lv_label_set_recolor(label, true);
+    lv_label_set_text(label, result ? "#FFFFFF [# #00ff00 PASS# #FFFFFF ]#" : "#FFFFFF [# #ff0000  FAIL# #FFFFFF ]#");
+    lv_obj_align(label, LV_ALIGN_RIGHT_MID, 0, 0);
+
+    lv_obj_scroll_to_y(parent, lv_disp_get_ver_res(NULL), LV_ANIM_ON);
+
+    int i = 200;
+    while (i--) {
+        lv_task_handler();
+        delay(1);
     }
-
 }
-
-void factory_ui(lv_obj_t *parent)
-{
-    static lv_style_t lable_style;
-    lv_style_init(&lable_style);
-    lv_style_set_text_color(&lable_style, lv_color_white());
-
-    static lv_style_t bg_style;
-    lv_style_init(&bg_style);
-    lv_style_set_text_color(&bg_style, lv_color_white());
-    lv_style_set_bg_img_src(&bg_style, &image);
-    lv_style_set_bg_opa(&bg_style, LV_OPA_100);
-
-    tv = lv_tabview_create(parent, LV_DIR_TOP, 50);
-    lv_obj_add_style(tv, &bg_style, LV_PART_MAIN);
-
-    lv_obj_t *t1 = lv_tabview_add_tab(tv, "Hardware");
-    lv_obj_t *t2 = lv_tabview_add_tab(tv, "Radio");
-    lv_obj_t *t3 = lv_tabview_add_tab(tv, "Keyboard");
-
-
-    static lv_style_t ta_bg_style;
-    lv_style_init(&ta_bg_style);
-    lv_style_set_text_color(&ta_bg_style, lv_color_white());
-    lv_style_set_bg_opa(&ta_bg_style, LV_OPA_100);
-
-
-    hw_ta = lv_textarea_create(t1);
-    lv_textarea_set_cursor_click_pos(hw_ta, false);
-    lv_textarea_set_text_selection(hw_ta, false);
-    lv_obj_set_size(hw_ta, LV_HOR_RES, LV_VER_RES / 2);
-    lv_textarea_set_text(hw_ta, "");
-    lv_textarea_set_max_length(hw_ta, 1024);
-    lv_obj_align(hw_ta, LV_ALIGN_TOP_MID, 0, 0);
-
-
-    lv_obj_add_style(hw_ta, &ta_bg_style, LV_PART_ANY);
-
-    radio_ta = lv_textarea_create(t2);
-    lv_textarea_set_cursor_click_pos(radio_ta, false);
-    lv_textarea_set_text_selection(radio_ta, false);
-    lv_obj_set_size(radio_ta, LV_HOR_RES, LV_VER_RES / 2);
-    lv_textarea_set_text(radio_ta, "");
-    lv_textarea_set_max_length(radio_ta, 1024);
-    lv_obj_align(radio_ta, LV_ALIGN_TOP_MID, 0, 0);
-
-    lv_obj_add_style(radio_ta, &ta_bg_style, LV_PART_ANY);
-
-    lv_obj_t *sw = lv_switch_create(t2);
-    lv_obj_align_to(sw, radio_ta, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
-
-    lv_obj_t *label = lv_label_create(t2);
-    lv_label_set_text(label, "Tx");
-    lv_obj_align_to(label, sw, LV_ALIGN_OUT_LEFT_MID, -10, 0);
-    lv_obj_add_style(label, &lable_style, LV_PART_MAIN);
-
-    label = lv_label_create(t2);
-    lv_label_set_text(label, "Rx");
-    lv_obj_align_to(label, sw, LV_ALIGN_OUT_RIGHT_MID, 10, 0);
-    lv_obj_add_style(label, &lable_style, LV_PART_MAIN);
-    lv_obj_add_event_cb(sw, event_handler, LV_EVENT_VALUE_CHANGED, NULL);
-
-
-    lv_obj_t *kb_ta = lv_textarea_create(t3);
-    lv_textarea_set_cursor_click_pos(kb_ta, false);
-    lv_textarea_set_cursor_pos(kb_ta, 0);
-    lv_textarea_set_text_selection(kb_ta, false);
-    lv_obj_set_size(kb_ta, LV_HOR_RES, LV_VER_RES / 2);
-    lv_textarea_set_text(kb_ta, "");
-    lv_textarea_set_max_length(kb_ta, 512);
-    lv_obj_align(kb_ta, LV_ALIGN_TOP_MID, 0, 0);
-    lv_obj_add_style(kb_ta, &ta_bg_style, LV_PART_ANY);
-
-}
-
 
 static bool getTouch(int16_t &x, int16_t &y);
 
 bool checkKb()
 {
-    Wire.requestFrom(0x55, 1);
-    return Wire.read() != -1;
+    int retry = 3;
+    do {
+        Wire.requestFrom(0x55, 1);
+        if (Wire.read() != -1) {
+            return true;
+        }
+    } while (retry--);
+    return false;
 }
 
-void disp_inver_event(lv_event_t *e)
+void vadTask(void *params)
 {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED)return;
-    uint8_t *index =  (uint8_t *) lv_event_get_user_data(e);
-    if (!index)return;
-    switch (*index) {
-    case 0:
-    case 1:
-        tft.invertDisplay(*index);
-        break;
-    case 2:
-        clicked = true;
-        break;
-    default:
-        break;
+    Serial.println("vadTask(void *params)");
+
+    vTaskSuspend(NULL);
+    while (1) {
+        size_t read_len = 0;
+        if (i2s_read(MIC_I2S_PORT, (char *) vad_buff, vad_buffer_size, &read_len, portMAX_DELAY) == ESP_OK) {
+            // if (watch.readMicrophone((char *) vad_buff, vad_buffer_size, &read_len)) {
+            // Feed samples to the VAD process and get the result
+#if  ESP_IDF_VERSION_VAL(4,4,1) == ESP_IDF_VERSION
+            vad_state_t vad_state = vad_process(vad_inst, vad_buff);
+#elif ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4,4,1) && ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5,0,0)
+            vad_state_t vad_state = vad_process(vad_inst, vad_buff, MIC_I2S_SAMPLE_RATE, VAD_FRAME_LENGTH_MS);
+#else
+#error "ESP VAD Not support Version > V5.0.0 , please use IDF V4.4.4"
+#endif
+            if (vad_state == VAD_SPEECH) {
+                Serial.print(millis());
+                Serial.println(" -> Noise detected!!!");
+                if (vad_btn_label) {
+                    lv_label_set_text_fmt(vad_btn_label, "Noise %u", vad_detected_counter++);
+                }
+            }
+        }
+        delay(5);
     }
 }
 
-
-void initBoard()
+void setupMicphoneI2S(i2s_port_t  i2s_ch)
 {
-    bool ret = 0;
-
-    Serial.begin(115200);
-    Serial.println("T-DECK factory");
-
-    //! The board peripheral power control pin needs to be set to HIGH when using the peripheral
-    pinMode(BOARD_POWERON, OUTPUT);
-    digitalWrite(BOARD_POWERON, HIGH);
-
-    //! Set CS on all SPI buses to high level during initialization
-    pinMode(BOARD_SDCARD_CS, OUTPUT);
-    pinMode(RADIO_CS_PIN, OUTPUT);
-    pinMode(BOARD_TFT_CS, OUTPUT);
-
-    digitalWrite(BOARD_SDCARD_CS, HIGH);
-    digitalWrite(RADIO_CS_PIN, HIGH);
-    digitalWrite(BOARD_TFT_CS, HIGH);
-
-    pinMode(BOARD_SPI_MISO, INPUT_PULLUP);
-    SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
-
-    pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_G02, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_G01, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_G04, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_G03, INPUT_PULLUP);
-
-    //Wakeup touch chip
-    pinMode(BOARD_TOUCH_INT, OUTPUT);
-    digitalWrite(BOARD_TOUCH_INT, HIGH);
-
-    button.init();
-    ButtonConfig *buttonConfig = button.getButtonConfig();
-    buttonConfig->setEventHandler(handleEvent);
-    buttonConfig->setFeature(ButtonConfig::kFeatureClick);
-    buttonConfig->setFeature(ButtonConfig::kFeatureLongPress);
-
-    //Add mutex to allow multitasking access
-    xSemaphore = xSemaphoreCreateBinary();
-    assert(xSemaphore);
-    xSemaphoreGive( xSemaphore );
-
-    tft.begin();
-    tft.setRotation( 1 );
-    tft.fillScreen(TFT_BLACK);
-    Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
-
-
-    // Set touch int input
-    pinMode(BOARD_TOUCH_INT, INPUT); delay(20);
-
-    // Two touch screens, the difference between them is the device address,
-    // use ScanDevices to get the existing I2C address
-    scanDevices(&Wire);
-
-    touch = new TouchLib(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, touchAddress);
-
-    touch->init();
-
-    Wire.beginTransmission(touchAddress);
-    ret = Wire.endTransmission() == 0;
-    touchDected = ret;
-
-    kbDected = checkKb();
-
-    setupLvgl();
-
-    // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
-    // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
-    // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
-    // Adapt to two screens, the difference between them is that the colors are reversed, you can annotate them after confirming the screen
-    lv_obj_t *cont = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(cont, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL));
-    lv_obj_set_scroll_dir(cont, LV_DIR_VER);
-
-    lv_obj_t *label;
-    label = lv_label_create(cont);
-    lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL);
-    lv_obj_set_width(label, 320);
-    lv_label_set_text(label, "The button is blue, if the button is not blue, please press \"Invert OFF\" or \"Invert ON\" Button");
-    lv_obj_align(label, LV_ALIGN_TOP_LEFT, 0, 10);
-
-    static uint8_t invertFlag[3] = {0, 1, 2};
-    lv_obj_t *btn = lv_btn_create(cont);
-    lv_obj_set_size(btn, LV_PCT(50), LV_PCT(40));
-    lv_obj_t *btn_label = lv_label_create(btn);
-    lv_label_set_text(btn_label, "Invert ON");
-    lv_obj_center(btn_label);
-    lv_obj_add_event_cb(btn, disp_inver_event, LV_EVENT_ALL, &invertFlag[0]);
-    lv_obj_align_to(btn, label, LV_ALIGN_OUT_BOTTOM_LEFT, 5, 10);
-
-    btn = lv_btn_create(cont);
-    lv_obj_set_size(btn, LV_PCT(50), LV_PCT(40));
-    btn_label = lv_label_create(btn);
-    lv_label_set_text(btn_label, "Invert OFF");
-    lv_obj_center(btn_label);
-    lv_obj_add_event_cb(btn, disp_inver_event, LV_EVENT_ALL, &invertFlag[1]);
-    lv_obj_align_to(btn, label, LV_ALIGN_OUT_BOTTOM_RIGHT, -20, 10);
-
-
-    btn = lv_btn_create(cont);
-    lv_obj_set_size(btn, LV_PCT(50), LV_PCT(20));
-    btn_label = lv_label_create(btn);
-    lv_label_set_text(btn_label, "OK");
-    lv_obj_center(btn_label);
-    lv_obj_add_event_cb(btn, disp_inver_event, LV_EVENT_ALL, &invertFlag[2]);
-    lv_obj_align_to(btn, label, LV_ALIGN_OUT_BOTTOM_MID, -10, LV_PCT(40));
-
-    clicked = false;
-    while (!clicked) {
-        lv_task_handler(); delay(5);
-    }
-
-    lv_obj_del(cont);
-
-    // test image
-    const lv_img_dsc_t *img_src[4] = {&image1, &image2, &image3, &image4};
-    lv_obj_t *img = lv_img_create(lv_scr_act());
-    label = lv_label_create(lv_scr_act());
-    lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL);
-    lv_obj_set_width(label, 320);
-    lv_label_set_text(label, "Press the key of the trackball in the middle of the board to enter the next picture");
-    lv_obj_align(label, LV_ALIGN_TOP_LEFT, 0, 0);
-
-    clicked = false;
-    int i = 3;
-    while (i > 0) {
-        lv_img_set_src(img, (void *)(img_src[i]));
-        while (!clicked) {
-            lv_task_handler(); delay(5);
-            button.check();
-        }
-        i--;
-        clicked = false;
-    }
-
-    lv_obj_del(label);
-    lv_obj_del(img);
-
-
-    factory_ui(lv_scr_act());
-
-
-    char buf[256];
-    Serial.print("Touch:"); Serial.println(ret);
-    snprintf(buf, 256, "%s:%s\n", "Touch", ret == true ? "Successed" : "Failed");
-    addMessage(buf);
-
-    ret = setupSD();
-    Serial.print("SDCard:"); Serial.println(ret);
-    snprintf(buf, 256, "%s:%s\n", "SDCard", ret == true ? "Successed" : "Failed");
-    addMessage(buf);
-
-    ret = setupRadio();
-    Serial.print("Radio:"); Serial.println(ret);
-    snprintf(buf, 256, "%s:%s\n", "Radio", ret == true ? "Successed" : "Failed");
-    addMessage(buf);
-
-    ret = setupCoder();
-    Serial.print("Decoder:"); Serial.println(ret);
-    snprintf(buf, 256, "%s:%s\n", "Decoder", ret == true ? "Successed" : "Failed");
-    addMessage(buf);
-
-    Serial.print("Keyboard:"); Serial.println(kbDected);
-    snprintf(buf, 256, "%s:%s\n", "Keyboard", kbDected == true ? "Successed" : "Failed");
-    addMessage(buf);
-
-
-    if (SD.exists("/winxp.mp3")) {
-        const char *path = "winxp.mp3";
-        audio.setPinout(BOARD_I2S_BCK, BOARD_I2S_WS, BOARD_I2S_DOUT);
-        audio.setVolume(12);
-        audio.connecttoFS(SD, path);
-        Serial.printf("play %s\r\n", path);
-        while (audio.isRunning()) {
-            audio.loop();
-        }
-    }
-
     i2s_config_t i2s_config = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
-        .sample_rate = 16000,
+        .sample_rate = MIC_I2S_SAMPLE_RATE,
         .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
         .channel_format = I2S_CHANNEL_FMT_ALL_LEFT,
         .communication_format = I2S_COMM_FORMAT_STAND_I2S,
@@ -787,65 +566,91 @@ void initBoard()
         .fixed_mclk = 0,
         .mclk_multiple = I2S_MCLK_MULTIPLE_256,
         .bits_per_chan = I2S_BITS_PER_CHAN_16BIT,
-        .chan_mask =
-        (i2s_channel_t)(I2S_TDM_ACTIVE_CH0 | I2S_TDM_ACTIVE_CH1 |
-                        I2S_TDM_ACTIVE_CH2 | I2S_TDM_ACTIVE_CH3),
+        .chan_mask = (i2s_channel_t)(I2S_TDM_ACTIVE_CH0 | I2S_TDM_ACTIVE_CH1 |
+                                     I2S_TDM_ACTIVE_CH2 | I2S_TDM_ACTIVE_CH3),
         .total_chan = 4,
     };
+    i2s_pin_config_t pin_config = {0};
+    pin_config.data_in_num = BOARD_ES7210_DIN;
+    pin_config.mck_io_num = BOARD_ES7210_MCLK;
+    pin_config.bck_io_num = BOARD_ES7210_SCK;
+    pin_config.ws_io_num = BOARD_ES7210_LRCK;
+    pin_config.data_out_num = -1;
+    i2s_driver_install(i2s_ch, &i2s_config, 0, NULL);
+    i2s_set_pin(i2s_ch, &pin_config);
+    i2s_zero_dma_buffer(i2s_ch);
 
-    i2s_pin_config_t pin_config = {
-        .mck_io_num = BOARD_ES7210_MCLK,
-        .bck_io_num = BOARD_ES7210_SCK,
-        .ws_io_num = BOARD_ES7210_LRCK,
-        .data_in_num = BOARD_ES7210_DIN,
-    };
-    i2s_driver_install(I2S_CH, &i2s_config, 0, NULL);
-    i2s_set_pin(I2S_CH, &pin_config);
-    i2s_zero_dma_buffer(I2S_CH);
 
-
+    // Initialize esp-sr vad detected
+#if ESP_IDF_VERSION_VAL(4,4,1) == ESP_IDF_VERSION
+    vad_inst = vad_create(VAD_MODE_0, MIC_I2S_SAMPLE_RATE, VAD_FRAME_LENGTH_MS);
+#elif  ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4,4,1)
     vad_inst = vad_create(VAD_MODE_0);
-    vad_buff = (int16_t *)malloc(VAD_BUFFER_LENGTH * sizeof(short));
+#else
+#error "No support this version."
+#endif
+    vad_buff = (int16_t *)ps_malloc(vad_buffer_size);
     if (vad_buff == NULL) {
         while (1) {
             Serial.println("Memory allocation failed!");
             delay(1000);
         }
     }
+    xTaskCreate(vadTask, "vad", 8 * 1024, NULL, 12, &vadTaskHandler);
+}
 
-    // Wait until sound is detected before continuing
-    uint32_t c = 0;
-    while (1) {
-        i2s_read(I2S_CH, (char *)vad_buff, VAD_BUFFER_LENGTH * sizeof(short), &bytes_read, portMAX_DELAY);
-        // Feed samples to the VAD process and get the result
-        vad_state_t vad_state = vad_process(vad_inst, vad_buff, VAD_SAMPLE_RATE_HZ, VAD_FRAME_LENGTH_MS);
-        if (vad_state == VAD_SPEECH) {
-            Serial.print(millis());
-            Serial.println("Speech detected");
-            c++;
-            snprintf(buf, 256, "%s:%d\n", "Speech detected", c);
-            addMessage(buf);
+void playTTS(const char *filename)
+{
+    bool findMp3 = false;
+    if (SD.exists("/" + String(filename))) {
+        findMp3 = audio.connecttoFS(SD, filename);
+    } else if (SPIFFS.exists("/" + String(filename))) {
+        findMp3 = audio.connecttoFS(SPIFFS, filename);
+    }
+    if (findMp3) {
+        while (audio.isRunning()) {
+            audio.loop();
+            delay(3);
         }
-        if (c >= 5)break;
-        lv_task_handler();
-        delay(5);
     }
+}
 
-    i2s_driver_uninstall(I2S_CH);
+void setupAmpI2S(i2s_port_t  i2s_ch)
+{
+    audio.setPinout(BOARD_I2S_BCK, BOARD_I2S_WS, BOARD_I2S_DOUT);
+    audio.setVolume(21);
+}
 
-    pinMode(BOARD_BOOT_PIN, INPUT);
+void lv_button_event_cb(lv_event_t *e)
+{
+    static uint8_t btn_index = 0;
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED) {
+        DemoEvent event = *(DemoEvent *)lv_event_get_user_data(e);
+        switch (event) {
+        case DEMO_TX_BTN_CLICK_EVENT: {
+            if (!hasRadio) {
+                lv_textarea_set_text(radio_ta, "Radio is not online");
+                return;
+            }
+            lv_textarea_set_text(radio_ta, "");
+            // send the first packet on this node
+            Serial.print(F("[Radio] Sending first packet ... "));
+            transmissionState = radio.startTransmit("Hello World!");
+            sender = true;
+        }
 
-    while (!digitalRead(BOARD_BOOT_PIN)) {
-        Serial.println("BOOT HAS PRESSED!!!"); delay(500);
-    }
-
-    if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
-        if (hasRadio) {
-            if (sender) {
-                transmissionState = radio.startTransmit("0");
-                sendCount = 0;
-                Serial.println("startTransmit!!!!");
-            } else {
+        break;
+        case DEMO_RX_BTN_CLICK_EVENT:
+            Serial.println("DEMO_RX_BTN_CLICK_EVENT");
+            if (!hasRadio) {
+                lv_textarea_set_text(radio_ta, "Radio is not online");
+                return;
+            }
+            {
+                lv_textarea_set_text(radio_ta, "");
+                Serial.print(F("[Radio] Starting to listen ... "));
                 int state = radio.startReceive();
                 if (state == RADIOLIB_ERR_NONE) {
                     Serial.println(F("success!"));
@@ -853,14 +658,40 @@ void initBoard()
                     Serial.print(F("failed, code "));
                     Serial.println(state);
                 }
+                sender = false;
             }
+            break;
+        case DEMO_CLEAN_BTN_CLICK_EVENT:
+            Serial.println("DEMO_CLEAN_BTN_CLICK_EVENT");
+            lv_textarea_set_text(radio_ta, "");
+            break;
+        case DEMO_VAD_BTN_CLICK_EVENT:
+            Serial.println("DEMO_VAD_BTN_CLICK_EVENT"); {
+                lv_state_t state =  lv_obj_get_state(obj);
+                if (state == 2) {
+                    vTaskSuspend(vadTaskHandler);
+                    lv_label_set_text(vad_btn_label, "VAD detect");
+                } else {
+                    vad_detected_counter = 0;
+                    vTaskResume(vadTaskHandler);
+                }
+            }
+            break;
+        case DEMO_PLAY_BTN_CLICK_EVENT:
+            Serial.println("DEMO_PLAY_BTN_CLICK_EVENT");
+            if (playHandle) {
+                vTaskResume(playHandle);
+            }
+            break;
+        case DEMO_SLEEP_BTN_CLICK_EVENT:
+            enterSleep = true;
+            break;
+        default:
+            break;
         }
-        xSemaphoreGive( xSemaphore );
     }
-
-    xTaskCreate(taskplaySong, "play", 1024 * 4, NULL, 10, &playHandle);
-
 }
+
 
 // !!! LVGL !!!
 // !!! LVGL !!!
@@ -878,7 +709,6 @@ static void disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *
         xSemaphoreGive( xSemaphore );
     }
 }
-
 
 static bool getTouch(int16_t &x, int16_t &y)
 {
@@ -928,22 +758,22 @@ static void mouse_read(lv_indev_drv_t *indev, lv_indev_data_t *data)
             last_dir[i] = dir;
             switch (i) {
             case 0:
-                if (last_x < (lv_disp_get_hor_res(NULL) - mouse_cursor_icon.header.w)) {
+                if (last_x < (lv_disp_get_hor_res(NULL) - image_emoji.header.w)) {
                     last_x += pos;
                 }
                 break;
             case 1:
-                if (last_y > mouse_cursor_icon.header.h) {
+                if (last_y > image_emoji.header.h) {
                     last_y -= pos;
                 }
                 break;
             case 2:
-                if (last_x > mouse_cursor_icon.header.w) {
+                if (last_x > image_emoji.header.w) {
                     last_x -= pos;
                 }
                 break;
             case 3:
-                if (last_y < (lv_disp_get_ver_res(NULL) - mouse_cursor_icon.header.h)) {
+                if (last_y < (lv_disp_get_ver_res(NULL) - image_emoji.header.h)) {
                     last_y += pos;
                 }
                 break;
@@ -975,15 +805,9 @@ static uint32_t keypad_get_key(void)
     Wire.requestFrom(0x55, 1);
     while (Wire.available() > 0) {
         key_ch = Wire.read();
-        if (key_ch != (char)0x00) {
-            if (playHandle) {
-                vTaskResume(playHandle);
-            }
-        }
     }
     return key_ch;
 }
-
 
 /*Will be called by the library to read the mouse*/
 static void keypad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
@@ -1001,28 +825,17 @@ static void keypad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
     data->key = last_key;
 }
 
-
 void setupLvgl()
 {
     static lv_disp_draw_buf_t draw_buf;
-
-#ifndef BOARD_HAS_PSRAM
-#define LVGL_BUFFER_SIZE    ( TFT_HEIGHT * 100 )
-    static lv_color_t buf[ LVGL_BUFFER_SIZE ];
-#else
-#define LVGL_BUFFER_SIZE    (TFT_WIDTH * TFT_HEIGHT * sizeof(lv_color_t))
     static lv_color_t *buf = (lv_color_t *)ps_malloc(LVGL_BUFFER_SIZE);
     if (!buf) {
         Serial.println("menory alloc failed!");
         delay(5000);
         assert(buf);
     }
-#endif
-
-
     String LVGL_Arduino = "Hello Arduino! ";
     LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
-
     Serial.println( LVGL_Arduino );
     Serial.println( "I am LVGL_Arduino" );
 
@@ -1041,9 +854,7 @@ void setupLvgl()
     disp_drv.ver_res = TFT_WIDTH;
     disp_drv.flush_cb = disp_flush;
     disp_drv.draw_buf = &draw_buf;
-#ifdef BOARD_HAS_PSRAM
     disp_drv.full_refresh = 1;
-#endif
     lv_disp_drv_register( &disp_drv );
 
     /*Initialize the  input device driver*/
@@ -1067,7 +878,7 @@ void setupLvgl()
 
     lv_obj_t *cursor_obj;
     cursor_obj = lv_img_create(lv_scr_act());         /*Create an image object for the cursor */
-    lv_img_set_src(cursor_obj, &mouse_cursor_icon);   /*Set the image source*/
+    lv_img_set_src(cursor_obj, &image_emoji);   /*Set the image source*/
     lv_indev_set_cursor(mouse_indev, cursor_obj);           /*Connect the image  object to the driver*/
 
     if (kbDected) {
@@ -1083,27 +894,235 @@ void setupLvgl()
 
 }
 
-
-
-
-void handleEvent(AceButton * /* button */, uint8_t eventType,
-                 uint8_t /* buttonState */)
+void setup()
 {
-    switch (eventType) {
-    case AceButton::kEventClicked:
-        clicked = true;
-        Serial.println("Clicked!");
-        break;
-    case AceButton::kEventLongPressed:
+    Serial.begin(115200);
+    Serial.println("T-DECK factory");
 
-        Serial.println("ClickkEventLongPresseded!"); delay(2000);
+    //! The board peripheral power control pin needs to be set to HIGH when using the peripheral
+    pinMode(BOARD_POWERON, OUTPUT);
+    digitalWrite(BOARD_POWERON, HIGH);
 
-#if TFT_BL !=  BOARD_BL_PIN
-#error "Not using the already configured T-Deck file, please remove <Arduino/libraries/TFT_eSPI> and replace with <lib/TFT_eSPI>, please do not click the upgrade library button when opening sketches in ArduinoIDE versions 2.0 and above, otherwise the original configuration file will be replaced !!!"
-#error "Not using the already configured T-Deck file, please remove <Arduino/libraries/TFT_eSPI> and replace with <lib/TFT_eSPI>, please do not click the upgrade library button when opening sketches in ArduinoIDE versions 2.0 and above, otherwise the original configuration file will be replaced !!!"
-#error "Not using the already configured T-Deck file, please remove <Arduino/libraries/TFT_eSPI> and replace with <lib/TFT_eSPI>, please do not click the upgrade library button when opening sketches in ArduinoIDE versions 2.0 and above, otherwise the original configuration file will be replaced !!!"
-#endif
+    //! Set CS on all SPI buses to high level during initialization
+    pinMode(BOARD_SDCARD_CS, OUTPUT);
+    pinMode(RADIO_CS_PIN, OUTPUT);
+    pinMode(BOARD_TFT_CS, OUTPUT);
 
+    digitalWrite(BOARD_SDCARD_CS, HIGH);
+    digitalWrite(RADIO_CS_PIN, HIGH);
+    digitalWrite(BOARD_TFT_CS, HIGH);
+
+    pinMode(BOARD_SPI_MISO, INPUT_PULLUP);
+    SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
+
+    pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G02, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G01, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G04, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G03, INPUT_PULLUP);
+
+    //Wakeup touch chip
+    pinMode(BOARD_TOUCH_INT, OUTPUT);
+    digitalWrite(BOARD_TOUCH_INT, HIGH);
+
+    //Add mutex to allow multitasking access
+    xSemaphore = xSemaphoreCreateBinary();
+    assert(xSemaphore);
+    xSemaphoreGive( xSemaphore );
+
+    tft.begin();
+    tft.setRotation( 1 );
+    tft.fillScreen(TFT_BLACK);
+    Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
+
+
+    // Set touch int input
+    pinMode(BOARD_TOUCH_INT, INPUT); delay(20);
+
+    // Two touch screens, the difference between them is the device address,
+    // use ScanDevices to get the existing I2C address
+    scanDevices(&Wire);
+
+    touch = new TouchLib(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, touchAddress);
+
+    touch->init();
+
+    Wire.beginTransmission(touchAddress);
+    touchDected = Wire.endTransmission() == 0;
+
+    kbDected = checkKb();
+
+    setupLvgl();
+
+    SPIFFS.begin();
+
+    setupSD();
+
+    setupRadio();
+
+    setupCoder();
+
+    setupAmpI2S(SPK_I2S_PORT);
+
+    setupMicphoneI2S(MIC_I2S_PORT);
+
+    // Test screen
+    lv_obj_t *label;
+
+    const lv_img_dsc_t *img_src[4] = {&image1, &image2, &image3, &image4};
+    lv_obj_t *img = lv_img_create(lv_scr_act());
+    lv_img_set_src(img, (void *)(img_src[3]));
+
+    // Adjust backlight
+    pinMode(BOARD_BL_PIN, OUTPUT);
+    //T-Deck control backlight chip has 16 levels of adjustment range
+    for (int i = 0; i < 16; ++i) {
+        setBrightness(i);
+        lv_task_handler();
+        delay(30);
+    }
+    delay(4000);
+
+    int i = 2;
+    while (i >= 0) {
+        lv_img_set_src(img, (void *)(img_src[i]));
+        lv_task_handler();
+        i--;
+        delay(2000);
+    }
+
+    lv_obj_del(img);
+
+
+
+    main_count = lv_obj_create(lv_scr_act());
+    lv_obj_set_style_bg_img_src(main_count, &image_output, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(main_count, LV_OPA_100, 0);
+    lv_obj_set_style_radius(main_count, 0, 0);
+    lv_obj_set_size(main_count, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_flex_flow(main_count, LV_FLEX_FLOW_COLUMN);
+    lv_obj_center(main_count);
+
+    // Show device state
+    serialToScreen(main_count, "Keyboard C3", kbDected);
+
+    serialToScreen(main_count, "Capacitive Touch", touchDected);
+    serialToScreen(main_count, "Radio SX1262", hasRadio);
+    if (SD.cardType() != CARD_NONE) {
+        serialToScreen(main_count, "Mass storage #FFFFFF [# #00ff00  "
+                       + String(SD.cardSize() / 1024 / 1024.0 )
+                       + "MB# #FFFFFF ]#", true);
+    } else {
+        serialToScreen(main_count, "Mass storage", false);
+    }
+
+    uint32_t endTime = millis() + 5000;
+    while (millis() < endTime) {
+        lv_task_handler();
+        delay(1);
+    }
+
+    lv_obj_clean(main_count);
+    lv_obj_set_scroll_dir(main_count, LV_DIR_NONE);
+    lv_obj_set_scrollbar_mode(main_count, LV_SCROLLBAR_MODE_OFF);
+
+
+    // Simple GUI for factory test
+    lv_obj_t *win_ui =  lv_obj_create(main_count);
+    lv_obj_set_style_border_width(win_ui, 0, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(win_ui, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(win_ui, 0, LV_PART_MAIN);
+    lv_obj_set_size(win_ui, LV_PCT(100), LV_PCT(55));
+
+    radio_ta = lv_textarea_create(win_ui);
+    lv_obj_set_style_bg_opa(radio_ta, LV_OPA_50, 0);
+    lv_textarea_set_cursor_click_pos(radio_ta, false);
+    lv_textarea_set_text_selection(radio_ta, false);
+    lv_obj_set_size(radio_ta, LV_PCT(100), LV_PCT(100));
+    lv_textarea_set_text(radio_ta, "");
+    lv_textarea_set_max_length(radio_ta, 1024);
+
+    lv_obj_t *btn_ui =  lv_obj_create(main_count);
+    lv_obj_set_style_bg_opa(btn_ui, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_size(btn_ui, LV_PCT(100), LV_PCT(20));
+    lv_obj_set_flex_flow(btn_ui, LV_FLEX_FLOW_ROW);
+    lv_obj_align_to(btn_ui, radio_ta, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_pad_top(btn_ui, 1, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(btn_ui, 1, LV_PART_MAIN);
+
+    lv_obj_t *btn1 = lv_btn_create(btn_ui);
+    lv_obj_set_size(btn1, LV_PCT(21), LV_PCT(100));
+    lv_obj_add_event_cb(btn1, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[0]);
+    label = lv_label_create(btn1);
+    lv_label_set_text(label, "Tx");
+    lv_obj_set_user_data(btn1, label);
+    lv_obj_center(label);
+
+    lv_obj_t *btn2 = lv_btn_create(btn_ui);
+    lv_obj_set_size(btn2, LV_PCT(21), LV_PCT(100));
+    lv_obj_add_event_cb(btn2, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[1]);
+    label = lv_label_create(btn2);
+    lv_label_set_text(label, "Rx");
+    lv_obj_center(label);
+
+    lv_obj_t *btn3 = lv_btn_create(btn_ui);
+    lv_obj_set_size(btn3, LV_PCT(21), LV_PCT(100));
+    lv_obj_add_event_cb(btn3, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[2]);
+    label = lv_label_create(btn3);
+    lv_label_set_text(label, "Clean");
+    lv_obj_center(label);
+
+    lv_obj_t *sleep = lv_btn_create(btn_ui);
+    lv_obj_set_size(sleep, LV_PCT(25), LV_PCT(100));
+    lv_obj_add_event_cb(sleep, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[5]);
+    label = lv_label_create(sleep);
+    lv_label_set_text(label, "Sleep");
+    lv_obj_center(label);
+
+    lv_obj_t *btn_ui2 =  lv_obj_create(main_count);
+    lv_obj_set_style_bg_opa(btn_ui2, LV_OPA_TRANSP, 0);
+    lv_obj_set_size(btn_ui2, LV_PCT(100), LV_PCT(20));
+    lv_obj_set_flex_flow(btn_ui2, LV_FLEX_FLOW_ROW);
+    lv_obj_align_to(btn_ui2, btn_ui, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_pad_top(btn_ui2, 1, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(btn_ui2, 1, LV_PART_MAIN);
+
+    lv_obj_t *btn4 = lv_btn_create(btn_ui2);
+    lv_obj_set_size(btn4, LV_PCT(45), LV_PCT(100));
+    lv_obj_add_flag(btn4, LV_OBJ_FLAG_CHECKABLE);
+    lv_obj_add_event_cb(btn4, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[3]);
+    vad_btn_label = lv_label_create(btn4);
+    lv_label_set_text(vad_btn_label, "Noise detection");
+    lv_obj_center(vad_btn_label);
+
+    lv_obj_t *btn5 = lv_btn_create(btn_ui2);
+    lv_obj_set_size(btn5, LV_PCT(45), LV_PCT(100));
+    lv_obj_add_event_cb(btn5, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[4]);
+    label = lv_label_create(btn5);
+    lv_label_set_text(label, "Play MP3");
+    lv_obj_center(label);
+
+
+    xTaskCreate(taskplaySong, "play", 1024 * 4, NULL, 10, &playHandle);
+}
+
+void loop()
+{
+    if (enterSleep) {
+
+        lv_obj_clean(main_count);
+        lv_obj_t *label = lv_label_create(main_count);
+        lv_label_set_text(label, "Sleep");
+        lv_obj_center(label);
+
+        //LilyGo T-Deck control backlight chip has 16 levels of adjustment range
+        for (int i = 16; i > 0; --i) {
+            setBrightness(i);
+            lv_task_handler();
+            delay(30);
+        }
+
+        delay(1000);
 
         //If you need other peripherals to maintain power, please set the IO port to hold
         // gpio_hold_en((gpio_num_t)BOARD_POWERON);
@@ -1113,39 +1132,18 @@ void handleEvent(AceButton * /* button */, uint8_t eventType,
         pinMode(BOARD_TOUCH_INT, OUTPUT);
         digitalWrite(BOARD_TOUCH_INT, LOW); //Before touch to set sleep, it is necessary to set INT to LOW
         touch->enableSleep();        //set touchpad enter sleep mode
-        tft.writecommand(0x10);     //set disaplay enter sleep mode
-        delay(2000);
+        tft.writecommand(0x10);      //set disaplay enter sleep mode
+        SPI.end();
+        Wire.end();
         esp_sleep_enable_ext1_wakeup(1ull << BOARD_BOOT_PIN, ESP_EXT1_WAKEUP_ALL_LOW);
         esp_deep_sleep_start();
         //Deep sleep consumes approximately 240uA of current
-        break;
     }
-}
 
-
-void setup()
-{
-    initBoard();
-}
-
-
-void loop()
-{
-    button.check();
     loopRadio();
     lv_task_handler();
-    delay(5);
+    delay(1);
 }
-
-
-
-
-
-
-
-
-
-
 
 
 

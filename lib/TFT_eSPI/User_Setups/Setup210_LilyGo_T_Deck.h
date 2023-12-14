@@ -28,7 +28,7 @@
 #define TFT_DC   11
 #define TFT_RST  -1  // Connect reset to ensure display initialises
 #define TFT_BACKLIGHT_ON 1
-#define TFT_BL     42
+// #define TFT_BL     42    //Turn off backlight function by default
 
 
 #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH

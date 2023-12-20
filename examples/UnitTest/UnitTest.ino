@@ -664,6 +664,7 @@ void lv_button_event_cb(lv_event_t *e)
         case DEMO_CLEAN_BTN_CLICK_EVENT:
             Serial.println("DEMO_CLEAN_BTN_CLICK_EVENT");
             lv_textarea_set_text(radio_ta, "");
+            radio.standby();
             break;
         case DEMO_VAD_BTN_CLICK_EVENT:
             Serial.println("DEMO_VAD_BTN_CLICK_EVENT"); {

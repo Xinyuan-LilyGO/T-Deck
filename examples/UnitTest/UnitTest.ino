@@ -361,7 +361,7 @@ void taskplaySong(void *p)
 void loopRadio()
 {
     if (!hasRadio) {
-        lv_textarea_set_text(radio_ta, "Radio not online !");
+        // lv_textarea_set_text(radio_ta, "Radio not online !");
         return ;
     }
     if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {

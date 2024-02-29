@@ -25,7 +25,10 @@
 #include "es7210.h"
 #include <Audio.h>
 #include <driver/i2s.h>
-#include <esp_vad.h>
+
+// By default, the audio pass-through speaker is used for testing, and esp_sr can also be used for noise detection.
+// #define USE_ESP_VAD
+
 
 #define TOUCH_MODULES_GT911
 #include "TouchLib.h"
@@ -83,18 +86,24 @@ static const DemoEvent event[] = {
     DEMO_SLEEP_BTN_CLICK_EVENT,
 };
 
+#ifdef USE_ESP_VAD
+#include <esp_vad.h>
+int16_t         *vad_buff;
+vad_handle_t    vad_inst;
+const size_t    vad_buffer_size = VAD_BUFFER_LENGTH * sizeof(short);
+#else
+uint16_t loopbackBuffer[3200] = {0};
+#endif
+
 TouchLib *touch = NULL;
 SX1262 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUSY_PIN);
 TFT_eSPI        tft;
 Audio           audio;
 size_t          bytes_read;
 uint8_t         status;
-int16_t         *vad_buff;
-vad_handle_t    vad_inst;
 TaskHandle_t    playHandle = NULL;
 TaskHandle_t    radioHandle = NULL;
 
-const size_t vad_buffer_size = VAD_BUFFER_LENGTH * sizeof(short);
 static lv_obj_t *vad_btn_label;
 static uint32_t vad_detected_counter = 0;
 static TaskHandle_t vadTaskHandler;
@@ -146,9 +155,6 @@ void setBrightness(uint8_t value)
     }
     level = value;
 }
-
-
-
 
 void setFlag(void)
 {
@@ -338,10 +344,7 @@ bool setupCoder()
     ret_val |= es7210_adc_config_i2s(cfg.codec_mode, &cfg.i2s_iface);
     ret_val |= es7210_adc_set_gain(
                    (es7210_input_mics_t)(ES7210_INPUT_MIC1 | ES7210_INPUT_MIC2),
-                   (es7210_gain_value_t)GAIN_0DB);
-    ret_val |= es7210_adc_set_gain(
-                   (es7210_input_mics_t)(ES7210_INPUT_MIC3 | ES7210_INPUT_MIC4),
-                   (es7210_gain_value_t)GAIN_37_5DB);
+                   (es7210_gain_value_t)GAIN_6DB);
     ret_val |= es7210_adc_ctrl_state(cfg.codec_mode, AUDIO_HAL_CTRL_START);
     return ret_val == ESP_OK;
 
@@ -521,6 +524,7 @@ bool checkKb()
     return false;
 }
 
+#ifdef USE_ESP_VAD
 void vadTask(void *params)
 {
     Serial.println("vadTask(void *params)");
@@ -550,7 +554,26 @@ void vadTask(void *params)
     }
 }
 
-void setupMicphoneI2S(i2s_port_t  i2s_ch)
+#else
+
+void audioLoopbackTask(void *params)
+{
+    vTaskSuspend(NULL);
+    while (1) {
+        delay(5);
+        size_t bytes_read = 0, bytes_write = 0;
+        memset(loopbackBuffer, 0, sizeof(loopbackBuffer));
+        i2s_read(MIC_I2S_PORT, loopbackBuffer, sizeof(loopbackBuffer), &bytes_read, 15);
+        if (bytes_read) {
+            i2s_write(SPK_I2S_PORT, loopbackBuffer, bytes_read, &bytes_write, 15);
+        }
+    }
+    vTaskDelete(NULL);
+}
+
+#endif
+
+void setupMicrophoneI2S(i2s_port_t  i2s_ch)
 {
     i2s_config_t i2s_config = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
@@ -580,7 +603,7 @@ void setupMicphoneI2S(i2s_port_t  i2s_ch)
     i2s_set_pin(i2s_ch, &pin_config);
     i2s_zero_dma_buffer(i2s_ch);
 
-
+#ifdef USE_ESP_VAD
     // Initialize esp-sr vad detected
 #if ESP_IDF_VERSION_VAL(4,4,1) == ESP_IDF_VERSION
     vad_inst = vad_create(VAD_MODE_0, MIC_I2S_SAMPLE_RATE, VAD_FRAME_LENGTH_MS);
@@ -597,10 +620,21 @@ void setupMicphoneI2S(i2s_port_t  i2s_ch)
         }
     }
     xTaskCreate(vadTask, "vad", 8 * 1024, NULL, 12, &vadTaskHandler);
+#else
+    xTaskCreate(audioLoopbackTask, "vad", 8 * 1024, NULL, 12, &vadTaskHandler);
+#endif
+
 }
 
 void playTTS(const char *filename)
 {
+    vTaskSuspend(vadTaskHandler);
+#ifdef USE_ESP_VAD
+    lv_label_set_text(vad_btn_label, "VAD detect");
+#else
+    lv_label_set_text(vad_btn_label, "loopback");
+#endif
+
     bool findMp3 = false;
     if (SD.exists("/" + String(filename))) {
         findMp3 = audio.connecttoFS(SD, filename);
@@ -671,7 +705,11 @@ void lv_button_event_cb(lv_event_t *e)
                 lv_state_t state =  lv_obj_get_state(obj);
                 if (state == 2) {
                     vTaskSuspend(vadTaskHandler);
+#ifdef USE_ESP_VAD
                     lv_label_set_text(vad_btn_label, "VAD detect");
+#else
+                    lv_label_set_text(vad_btn_label, "loopback");
+#endif
                 } else {
                     vad_detected_counter = 0;
                     vTaskResume(vadTaskHandler);
@@ -965,7 +1003,7 @@ void setup()
 
     setupAmpI2S(SPK_I2S_PORT);
 
-    setupMicphoneI2S(MIC_I2S_PORT);
+    setupMicrophoneI2S(MIC_I2S_PORT);
 
     // Test screen
     lv_obj_t *label;
@@ -1093,7 +1131,11 @@ void setup()
     lv_obj_add_flag(btn4, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_add_event_cb(btn4, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[3]);
     vad_btn_label = lv_label_create(btn4);
+#ifdef USE_ESP_VAD
     lv_label_set_text(vad_btn_label, "Noise detection");
+#else
+    lv_label_set_text(vad_btn_label, "loopback");
+#endif
     lv_obj_center(vad_btn_label);
 
     lv_obj_t *btn5 = lv_btn_create(btn_ui2);

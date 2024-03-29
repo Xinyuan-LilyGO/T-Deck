@@ -13,6 +13,7 @@ examples
 ├─Keyboard_T_Deck_Master # T-Deck read from keyboard
 ├─Microphone             # Noise detection  
 ├─Touchpad               # Read touch coordinates 
+├─GPSShield              # GPS Shield example
 └─UnitTest               # Factory hardware unit testing           
 
 ````

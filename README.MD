@@ -35,13 +35,14 @@ examples
 
 ### ArduinoIDE
 
-1. Install [ArduinoIDE](https://www.arduino.cc/en/software)
-2. Copy all the folders in the `T-Deck/lib` directory to `<C:\Users\UserName\Documents\Arduino\libraries>`. If there is no `libraries` directory, please create a new one. Please note that you are not copying the `lib` directory, but copying the folders in the lib directory
-3. Open ArduinoIDE  ,`Tools` , Look at the picture to choose
+1. Install [Arduino IDE](https://www.arduino.cc/en/software)
+2. Install [Arduino ESP32 V2.0.5 or above and below V3.0](https://docs.espressif.com/projects/arduino-esp32/en/latest/)
+3. Copy all the folders in the `T-Deck/lib` directory to `<C:\Users\UserName\Documents\Arduino\libraries>`. If there is no `libraries` directory, please create a new one. Please note that you are not copying the `lib` directory, but copying the folders in the lib directory
+4. Open ArduinoIDE  ,`Tools` , Look at the picture to choose
     | T-Deck(ESP32S3)      | T-Keyboard(ESP32C3)  |
     | -------------------- | -------------------- |
     | ![s3](images/s3.jpg) | ![c3](images/c3.jpg) |
-4. Insert USB into the PC and click Upload <If the upload fails, keep pressing the BOOT button, click RST, and then click Upload. When the upload is complete, click RST to exit the download mode>
+5. Insert USB into the PC and click Upload <If the upload fails, keep pressing the BOOT button, click RST, and then click Upload. When the upload is complete, click RST to exit the download mode>
 
 ## 3️⃣ Tips:
 

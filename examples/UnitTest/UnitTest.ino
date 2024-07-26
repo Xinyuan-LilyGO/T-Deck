@@ -27,8 +27,7 @@
 #include <driver/i2s.h>
 
 // By default, the audio pass-through speaker is used for testing, and esp_sr can also be used for noise detection.
-// #define USE_ESP_VAD
-
+#define USE_ESP_VAD
 
 #define TOUCH_MODULES_GT911
 #include "TouchLib.h"
@@ -47,6 +46,45 @@
 #ifndef RADIO_FREQ
 #define RADIO_FREQ                  868.0
 #endif
+
+
+
+typedef struct {
+    uint8_t cmd;
+    uint8_t data[14];
+    uint8_t len;
+} lcd_cmd_t;
+
+lcd_cmd_t lcd_st7789v[] = {
+    {0x01, {0}, 0 | 0x80},
+    {0x11, {0}, 0 | 0x80},
+    {0x3A, {0X05}, 1},
+    {0x36, {0x55}, 1},
+    {0xB2, {0x0C, 0x0C, 0X00, 0X33, 0X33}, 5},
+    {0xB7, {0X75}, 1},
+    {0xBB, {0X1A}, 1},
+    {0xC0, {0X2C}, 1},
+    {0xC2, {0X01}, 1},
+    {0xC3, {0X13}, 1},
+    {0xC4, {0X20}, 1},
+    {0xC6, {0X0F}, 1},
+    {0xD0, {0XA4, 0XA1}, 2},
+    {0xD6, {0XA1}, 1},
+    {0xE0, {0XD0, 0X0D, 0X14, 0X0D, 0X0D, 0X09, 0X38, 0X44, 0X4E, 0X3A, 0X17, 0X18, 0X2F, 0X30}, 14},
+    {0xE1, {0XD0, 0X09, 0X0F, 0X08, 0X07, 0X14, 0X37, 0X44, 0X4D, 0X38, 0X15, 0X16, 0X2C, 0X3E}, 14},
+    {0x21, {0}, 0}, //invertDisplay
+    {0x29, {0}, 0},
+    {0x2C, {0}, 0},
+};
+#ifndef SerialGPS
+#define SerialGPS Serial1
+#endif
+
+#define BOARD_GPS_TX_PIN                 43
+#define BOARD_GPS_RX_PIN                 44
+#include <TinyGPS++.h>
+TinyGPSPlus gps;
+
 
 #define DEFAULT_COLOR               (lv_color_make(252, 218, 72))
 #define MIC_I2S_SAMPLE_RATE         16000
@@ -73,7 +111,8 @@ enum DemoEvent {
     DEMO_CLEAN_BTN_CLICK_EVENT,
     DEMO_VAD_BTN_CLICK_EVENT,
     DEMO_PLAY_BTN_CLICK_EVENT,
-    DEMO_SLEEP_BTN_CLICK_EVENT
+    DEMO_SLEEP_BTN_CLICK_EVENT,
+    DEMO_GPS_BTN_CLICK_EVENT
 };
 
 
@@ -84,6 +123,7 @@ static const DemoEvent event[] = {
     DEMO_VAD_BTN_CLICK_EVENT,
     DEMO_PLAY_BTN_CLICK_EVENT,
     DEMO_SLEEP_BTN_CLICK_EVENT,
+    DEMO_GPS_BTN_CLICK_EVENT,
 };
 
 #ifdef USE_ESP_VAD
@@ -115,6 +155,7 @@ bool        touchDected = false;
 bool        kbDected = false;
 bool        sender = true;
 bool        enterSleep = false;
+bool        runGPS = false;
 uint32_t    sendCount = 0;
 uint32_t    runningMillis = 0;
 uint8_t     touchAddress = GT911_SLAVE_ADDRESS2;
@@ -253,7 +294,7 @@ bool setupRadio()
     }
 
     // set output power to 10 dBm (accepted range is -17 - 22 dBm)
-    if (radio.setOutputPower(17) == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
+    if (radio.setOutputPower(22) == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
         Serial.println(F("Selected output power is invalid for this module!"));
         return false;
     }
@@ -361,11 +402,46 @@ void taskplaySong(void *p)
     }
 }
 
+void loopGPS()
+{
+    char buf[256] = {0};
+
+    if (!runGPS) {
+        return;
+    }
+    while (SerialGPS.available()) {
+        int c = SerialGPS.read();
+        // Serial.write(c);
+        gps.encode(c);
+    }
+
+    if (runningMillis < millis()) {
+        // if (gps.location.isValid() && gps.date.isValid() && gps.time.isValid()) {
+        snprintf(buf, 256, "lat:%.6f \nlng:%.6f\nDATE:%d/%d/%d\nTIME:%d:%d:%d\nProcessChar:%u\n",
+                 gps.location.lat(),
+                 gps.location.lng(),
+                 gps.date.year(),
+                 gps.date.month(),
+                 gps.date.day(),
+                 gps.time.hour(),
+                 gps.time.minute(),
+                 gps.time.second(),
+                 gps.charsProcessed()
+                );
+        lv_textarea_set_text(radio_ta, buf);
+        // }
+        runningMillis = millis()  + 3000;
+    }
+}
+
 void loopRadio()
 {
     if (!hasRadio) {
         // lv_textarea_set_text(radio_ta, "Radio not online !");
         return ;
+    }
+    if (runGPS) {
+        return;
     }
     if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
         digitalWrite(BOARD_SDCARD_CS, HIGH);
@@ -662,6 +738,13 @@ void lv_button_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED) {
         DemoEvent event = *(DemoEvent *)lv_event_get_user_data(e);
+
+        if (event != DEMO_GPS_BTN_CLICK_EVENT
+                && event != DEMO_PLAY_BTN_CLICK_EVENT
+                && event != DEMO_VAD_BTN_CLICK_EVENT) {
+            runGPS = false;
+        }
+
         switch (event) {
         case DEMO_TX_BTN_CLICK_EVENT: {
             if (!hasRadio) {
@@ -724,6 +807,12 @@ void lv_button_event_cb(lv_event_t *e)
             break;
         case DEMO_SLEEP_BTN_CLICK_EVENT:
             enterSleep = true;
+            break;
+        case DEMO_GPS_BTN_CLICK_EVENT:
+            Serial.println("DEMO_GPS_BTN_CLICK_EVENT");
+            lv_textarea_set_text(radio_ta, "");
+            radio.standby();
+            runGPS = true;
             break;
         default:
             break;
@@ -936,6 +1025,7 @@ void setupLvgl()
 void setup()
 {
     Serial.begin(115200);
+
     Serial.println("T-DECK factory");
 
     //! The board peripheral power control pin needs to be set to HIGH when using the peripheral
@@ -969,9 +1059,35 @@ void setup()
     assert(xSemaphore);
     xSemaphoreGive( xSemaphore );
 
+
+
+    Serial.print("Init display id:");
+    Serial.println(USER_SETUP_ID);
+
     tft.begin();
+
+    /**
+     * * T-Deck-Plus and T-Deck display panels are different. 
+     * * This initialization is used to override the initialization parameters. 
+     * * It is used when the display is abnormal after the TFT_eSPI update. */
+#if 0
+    for (uint8_t i = 0; i < (sizeof(lcd_st7789v) / sizeof(lcd_cmd_t)); i++) {
+        tft.writecommand(lcd_st7789v[i].cmd);
+        for (int j = 0; j < (lcd_st7789v[i].len & 0x7f); j++) {
+            tft.writedata(lcd_st7789v[i].data[j]);
+        }
+
+        if (lcd_st7789v[i].len & 0x80) {
+            delay(120);
+        }
+    }
+#endif
+
     tft.setRotation( 1 );
     tft.fillScreen(TFT_BLACK);
+
+    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+
     Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
 
@@ -1127,7 +1243,7 @@ void setup()
     lv_obj_set_style_pad_bottom(btn_ui2, 1, LV_PART_MAIN);
 
     lv_obj_t *btn4 = lv_btn_create(btn_ui2);
-    lv_obj_set_size(btn4, LV_PCT(45), LV_PCT(100));
+    lv_obj_set_size(btn4, LV_PCT(30), LV_PCT(100));
     lv_obj_add_flag(btn4, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_add_event_cb(btn4, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[3]);
     vad_btn_label = lv_label_create(btn4);
@@ -1139,10 +1255,17 @@ void setup()
     lv_obj_center(vad_btn_label);
 
     lv_obj_t *btn5 = lv_btn_create(btn_ui2);
-    lv_obj_set_size(btn5, LV_PCT(45), LV_PCT(100));
+    lv_obj_set_size(btn5, LV_PCT(30), LV_PCT(100));
     lv_obj_add_event_cb(btn5, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[4]);
     label = lv_label_create(btn5);
     lv_label_set_text(label, "Play MP3");
+    lv_obj_center(label);
+
+    lv_obj_t *btn6 = lv_btn_create(btn_ui2);
+    lv_obj_set_size(btn6, LV_PCT(30), LV_PCT(100));
+    lv_obj_add_event_cb(btn6, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[6]);
+    label = lv_label_create(btn6);
+    lv_label_set_text(label, "GPS");
     lv_obj_center(label);
 
 
@@ -1184,6 +1307,7 @@ void loop()
     }
 
     loopRadio();
+    loopGPS();
     lv_task_handler();
     delay(1);
 }

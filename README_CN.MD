@@ -5,6 +5,11 @@
 
 ## **[English](README.MD) | 中文**
 
+## 新
+
+1. T-Deck-Plus 已经将 **Grove** 接口上的Pin分配为GPS模块使用，所以T-Deck-Plus的 **Grove** 接口无法使用
+2. T-Deck 于 20240726 日更新 [TFT_eSPI ST7789 初始化序列](https://github.com/Xinyuan-LilyGO/T-Deck/commit/6adb8884c689f174c29a6d7172a0daa367a582eb), 目前变更没有推送TFT_eSPI上游分支,使用时候如果发现屏幕显示不正确，请检查此处是否和仓库内的初始化序列一致
+
 
 ## 1️⃣ 示例预览
 

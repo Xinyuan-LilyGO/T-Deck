@@ -2,7 +2,10 @@
 
 ## **English | [中文](README_CN.MD)**
 
+## News:
 
+1. T-Deck-Plus has assigned the pins on the **Grove** interface to the GPS module, so the **Grove** interface of T-Deck-Plus cannot be used.
+2. T-Deck updated [TFT_eSPI ST7789 initialization sequence](https://github.com/Xinyuan-LilyGO/T-Deck/commit/6adb8884c689f174c29a6d7172a0daa367a582eb) on 20240726. Currently, the changes have not been pushed to the TFT_eSPI upstream branch. If you find that the screen display is incorrect during use, please check whether this is consistent with the initialization sequence in the warehouse.
 
 ## 1️⃣ Examples preview
 

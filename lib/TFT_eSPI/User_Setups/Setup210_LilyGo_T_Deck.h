@@ -8,9 +8,9 @@
 
 // #define CGRAM_OFFSET      // Library will add offsets required
 
-// #define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
-#define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
-
+#define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
+// #define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
+#define INIT_SEQUENCE_2         //Different gamma values
 // #define TFT_INVERSION_ON
 // #define TFT_INVERSION_OFF  //For the first sample of T-Deck need to turn on color inversion
 

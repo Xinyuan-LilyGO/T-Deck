@@ -22,6 +22,11 @@
 
 TinyGPSPlus gps;
 
+// L76K GPS USE 9600 BAUDRATE
+#define GPS_BAUD        9600
+
+// M10Q GPS USE 38400 BAUDRATE
+// #define GPS_BAUD        38400
 
 void setup()
 {
@@ -32,7 +37,7 @@ void setup()
     digitalWrite(BOARD_POWERON, HIGH);
 
     //GPS Serial port
-    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+    SerialGPS.begin(GPS_BAUD, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
 
     Serial.println("This sketch only applies to boards carrying GPS shields, the default is T-Deck");
 

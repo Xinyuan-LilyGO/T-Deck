@@ -48,6 +48,11 @@
 #endif
 
 
+// L76K GPS USE 9600 BAUDRATE
+#define GPS_BAUD        9600
+
+// M10Q GPS USE 38400 BAUDRATE
+// #define GPS_BAUD        38400
 
 typedef struct {
     uint8_t cmd;
@@ -411,7 +416,7 @@ void loopGPS()
     }
     while (SerialGPS.available()) {
         int c = SerialGPS.read();
-        // Serial.write(c);
+        Serial.write(c);
         gps.encode(c);
     }
 
@@ -1086,7 +1091,8 @@ void setup()
     tft.setRotation( 1 );
     tft.fillScreen(TFT_BLACK);
 
-    SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+
+    SerialGPS.begin(GPS_BAUD, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
 
     Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 

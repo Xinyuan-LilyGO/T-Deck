@@ -25,6 +25,7 @@
 #include "es7210.h"
 #include <Audio.h>
 #include <driver/i2s.h>
+#include <WiFi.h>
 
 // By default, the audio pass-through speaker is used for testing, and esp_sr can also be used for noise detection.
 #define USE_ESP_VAD
@@ -174,6 +175,122 @@ lv_obj_t *main_count;
 SemaphoreHandle_t xSemaphore = NULL;
 
 void setupLvgl();
+
+#include <esp_sntp.h>
+
+#define WIFI_SSID             "You WIFI SSID"
+#define WIFI_PASS             "You WIFI PASSWORD"
+#define NTP_SERVER1           "pool.ntp.org"
+#define NTP_SERVER2           "time.nist.gov"
+#define DEFAULT_TIMEZONE      "CST-8"         //When the time zone cannot be obtained, the default time zone is used
+
+
+bool setupGPS()
+{
+    SerialGPS.begin(9600, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+
+    bool result = false;
+    uint32_t startTimeout ;
+    for (int i = 0; i < 3; ++i) {
+        SerialGPS.write("$PCAS03,0,0,0,0,0,0,0,0,0,0,,,0,0*02\r\n");
+        delay(5);
+        // Get version information
+        startTimeout = millis() + 3000;
+        Serial.print("Try to init L76K . Wait stop .");
+        while (SerialGPS.available()) {
+            Serial.print(".");
+            SerialGPS.readString();
+            if (millis() > startTimeout) {
+                Serial.println("Wait L76K stop NMEA timeout!");
+                return false;
+            }
+        };
+        Serial.println();
+        SerialGPS.flush();
+        delay(200);
+
+        SerialGPS.write("$PCAS06,0*1B\r\n");
+        startTimeout = millis() + 500;
+        String ver = "";
+        while (!SerialGPS.available()) {
+            if (millis() > startTimeout) {
+                Serial.println("Get L76K timeout!");
+                return false;
+            }
+        }
+        SerialGPS.setTimeout(10);
+        ver = SerialGPS.readStringUntil('\n');
+        if (ver.startsWith("$GPTXT,01,01,02")) {
+            Serial.println("L76K GNSS init succeeded, using L76K GNSS Module\n");
+            result = true;
+            break;
+        }
+        delay(500);
+    }
+    // Initialize the L76K Chip, use GPS + GLONASS
+    SerialGPS.write("$PCAS04,5*1C\r\n");
+    delay(250);
+    // only ask for RMC and GGA
+    SerialGPS.write("$PCAS03,1,0,0,0,1,0,0,0,0,0,,,0,0*02\r\n");
+    delay(250);
+    // Switch to Vehicle Mode, since SoftRF enables Aviation < 2g
+    SerialGPS.write("$PCAS11,3*1E\r\n");
+    return result;
+}
+
+static void time_available_cb(struct timeval *t)
+{
+    Serial.println("Got time adjustment from NTP!");
+}
+
+static void wifi_event_cb(WiFiEvent_t event)
+{
+    Serial.printf("[WiFi-event] event: %d\n", event);
+
+    switch (event) {
+    case ARDUINO_EVENT_WIFI_READY:
+        Serial.println("WiFi interface ready");
+        break;
+    case ARDUINO_EVENT_WIFI_SCAN_DONE:
+        Serial.println("Completed scan for access points");
+        break;
+    case ARDUINO_EVENT_WIFI_STA_START:
+        Serial.println("WiFi client started");
+        break;
+    case ARDUINO_EVENT_WIFI_STA_STOP:
+        Serial.println("WiFi clients stopped");
+        break;
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+        Serial.println("Connected to access point");
+        break;
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+        Serial.println("Disconnected from WiFi access point");
+        break;
+    case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
+        Serial.println("Authentication mode of access point has changed");
+        break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+        Serial.print("Obtained IP address: ");
+        Serial.println(WiFi.localIP());
+        break;
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+        Serial.println("Lost IP address and IP address is reset to 0");
+        break;
+    default: break;
+    }
+}
+
+
+void setupWiFi()
+{
+    WiFi.onEvent(wifi_event_cb);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+    configTzTime(DEFAULT_TIMEZONE, NTP_SERVER1, NTP_SERVER2);
+    // set notification call-back function
+    sntp_set_time_sync_notification_cb(time_available_cb);
+
+}
 
 // LilyGo  T-Deck  control backlight chip has 16 levels of adjustment range
 // The adjustable range is 0~15, 0 is the minimum brightness, 15 is the maximum brightness
@@ -1065,15 +1182,14 @@ void setup()
     xSemaphoreGive( xSemaphore );
 
 
-
     Serial.print("Init display id:");
     Serial.println(USER_SETUP_ID);
 
     tft.begin();
 
     /**
-     * * T-Deck-Plus and T-Deck display panels are different. 
-     * * This initialization is used to override the initialization parameters. 
+     * * T-Deck-Plus and T-Deck display panels are different.
+     * * This initialization is used to override the initialization parameters.
      * * It is used when the display is abnormal after the TFT_eSPI update. */
 #if 0
     for (uint8_t i = 0; i < (sizeof(lcd_st7789v) / sizeof(lcd_cmd_t)); i++) {
@@ -1092,7 +1208,13 @@ void setup()
     tft.fillScreen(TFT_BLACK);
 
 
-    SerialGPS.begin(GPS_BAUD, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+    setupWiFi();
+
+    if (!setupGPS()) {
+        // set ubox m10q gps baudrate 38400
+        SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+    }
+
 
     Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
@@ -1112,6 +1234,7 @@ void setup()
     touchDected = Wire.endTransmission() == 0;
 
     kbDected = checkKb();
+
 
     setupLvgl();
 
@@ -1239,6 +1362,30 @@ void setup()
     label = lv_label_create(sleep);
     lv_label_set_text(label, "Sleep");
     lv_obj_center(label);
+
+
+    label = lv_label_create(lv_scr_act());
+    lv_label_set_text(label, "00:00:00");
+    lv_obj_align(label, LV_ALIGN_TOP_RIGHT, 0, 0);
+
+    lv_timer_create([](lv_timer_t *t) {
+        lv_obj_t *label = (lv_obj_t *)t->user_data;
+        if (WiFi.isConnected()) {
+            time_t now;
+            struct tm  timeinfo;
+            time(&now);
+            localtime_r(&now, &timeinfo);
+
+            char datetime[128] = {0};
+            snprintf(datetime, 128, "%d/%d/%d %d:%d:%d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+            lv_label_set_text_fmt(label, "%s\nIP:%s\nRSSI:%d", datetime, WiFi.localIP().toString(), WiFi.RSSI());
+        } else {
+            lv_label_set_text(label, "NO CONNECT");
+        }
+
+    }, 1000, label);
+
+
 
     lv_obj_t *btn_ui2 =  lv_obj_create(main_count);
     lv_obj_set_style_bg_opa(btn_ui2, LV_OPA_TRANSP, 0);

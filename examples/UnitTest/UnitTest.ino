@@ -1378,7 +1378,7 @@ void setup()
 
             char datetime[128] = {0};
             snprintf(datetime, 128, "%d/%d/%d %d:%d:%d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-            lv_label_set_text_fmt(label, "%s\nIP:%s\nRSSI:%d", datetime, WiFi.localIP().toString(), WiFi.RSSI());
+            lv_label_set_text_fmt(label, "%s\nIP:%s\nRSSI:%d", datetime, WiFi.localIP().toString().c_str(), WiFi.RSSI());
         } else {
             lv_label_set_text(label, "NO CONNECT");
         }

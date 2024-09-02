@@ -6,6 +6,11 @@
  * @date      2024-03-29
  * @note      This sketch only applies to boards carrying GPS shields, the default is T-Deck
  *            It does not support GPS function. Of course, you can use an external GPS module to connect to the Gover interface.
+ * 
+ * @setting   Arduino IDE : Tools -> USB CDC On Boot -> Enabled
+ * @setting   Arduino IDE : Tools -> USB CDC On Boot -> Enabled
+ * @setting   Arduino IDE : Tools -> USB CDC On Boot -> Enabled
+ * @setting   Arduino IDE : Tools -> USB CDC On Boot -> Enabled
  */
 
 #ifndef SerialGPS
@@ -22,11 +27,58 @@
 
 TinyGPSPlus gps;
 
-// L76K GPS USE 9600 BAUDRATE
-#define GPS_BAUD        9600
 
-// M10Q GPS USE 38400 BAUDRATE
-// #define GPS_BAUD        38400
+bool setupGPS()
+{
+    // L76K GPS USE 9600 BAUDRATE
+    SerialGPS.begin(9600, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+    bool result = false;
+    uint32_t startTimeout ;
+    for (int i = 0; i < 3; ++i) {
+        SerialGPS.write("$PCAS03,0,0,0,0,0,0,0,0,0,0,,,0,0*02\r\n");
+        delay(5);
+        // Get version information
+        startTimeout = millis() + 3000;
+        Serial.print("Try to init L76K . Wait stop .");
+        while (SerialGPS.available()) {
+            Serial.print(".");
+            SerialGPS.readString();
+            if (millis() > startTimeout) {
+                Serial.println("Wait L76K stop NMEA timeout!");
+                return false;
+            }
+        };
+        Serial.println();
+        SerialGPS.flush();
+        delay(200);
+
+        SerialGPS.write("$PCAS06,0*1B\r\n");
+        startTimeout = millis() + 500;
+        String ver = "";
+        while (!SerialGPS.available()) {
+            if (millis() > startTimeout) {
+                Serial.println("Get L76K timeout!");
+                return false;
+            }
+        }
+        SerialGPS.setTimeout(10);
+        ver = SerialGPS.readStringUntil('\n');
+        if (ver.startsWith("$GPTXT,01,01,02")) {
+            Serial.println("L76K GNSS init succeeded, using L76K GNSS Module\n");
+            result = true;
+            break;
+        }
+        delay(500);
+    }
+    // Initialize the L76K Chip, use GPS + GLONASS
+    SerialGPS.write("$PCAS04,5*1C\r\n");
+    delay(250);
+    SerialGPS.write("$PCAS03,1,1,1,1,1,1,1,1,1,1,,,0,0*26\r\n");
+    delay(250);
+    // Switch to Vehicle Mode, since SoftRF enables Aviation < 2g
+    SerialGPS.write("$PCAS11,3*1E\r\n");
+    return result;
+}
 
 void setup()
 {
@@ -36,13 +88,16 @@ void setup()
     pinMode(BOARD_POWERON, OUTPUT);
     digitalWrite(BOARD_POWERON, HIGH);
 
-    //GPS Serial port
-    SerialGPS.begin(GPS_BAUD, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
-
     Serial.println("This sketch only applies to boards carrying GPS shields, the default is T-Deck");
 
     Serial.println("It does not support GPS function. Of course, you can use an external GPS module to connect to the Gover interface.");
 
+
+    // Arduino IDE : Tools -> USB CDC On Boot -> Enabled
+    if (!setupGPS()) {
+        // Set u-blox m10q gps baudrate 38400
+        SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+    }
 
     delay(2000);
 
@@ -50,6 +105,12 @@ void setup()
 
 void loop()
 {
+
+
+    while (Serial.available()) {
+        SerialGPS.write(Serial.read());
+    }
+
     while (SerialGPS.available()) {
         int c = SerialGPS.read();
         // Serial.write(c);
@@ -57,6 +118,12 @@ void loop()
             displayInfo();
         }
     }
+
+    if (millis() > 30000 && gps.charsProcessed() < 10) {
+        Serial.println(F("No GPS detected: check wiring."));
+        delay(1000);
+    }
+
     delay(1);
 }
 

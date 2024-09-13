@@ -14,6 +14,8 @@ static void sample_push_click(lv_event_t * e);
 
 static void sample_pop_click(lv_event_t * e);
 
+static void sample_container_del(lv_event_t * e);
+
 static void sample_fragment_inc_click(lv_event_t * e);
 
 typedef struct sample_fragment_t {
@@ -54,13 +56,15 @@ void lv_example_fragment_2(void)
     lv_obj_set_grid_cell(pop_btn, LV_GRID_ALIGN_END, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
 
     lv_fragment_manager_t * manager = lv_fragment_manager_create(NULL);
+    /* Clean up the fragment manager before objects in containers got deleted */
+    lv_obj_add_event_cb(root, sample_container_del, LV_EVENT_DELETE, manager);
+
     int depth = 0;
     lv_fragment_t * fragment = lv_fragment_create(&sample_cls, &depth);
     lv_fragment_manager_push(manager, fragment, &container);
     lv_obj_add_event_cb(push_btn, sample_push_click, LV_EVENT_CLICKED, manager);
     lv_obj_add_event_cb(pop_btn, sample_pop_click, LV_EVENT_CLICKED, manager);
 }
-
 
 static void sample_fragment_ctor(lv_fragment_t * self, void * args)
 {
@@ -104,6 +108,12 @@ static void sample_pop_click(lv_event_t * e)
 {
     lv_fragment_manager_t * manager = (lv_fragment_manager_t *) lv_event_get_user_data(e);
     lv_fragment_manager_pop(manager);
+}
+
+static void sample_container_del(lv_event_t * e)
+{
+    lv_fragment_manager_t * manager = (lv_fragment_manager_t *) lv_event_get_user_data(e);
+    lv_fragment_manager_del(manager);
 }
 
 static void sample_fragment_inc_click(lv_event_t * e)

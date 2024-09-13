@@ -20,7 +20,7 @@
 -->
 
 
-<package schemaVersion="1.4" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+<package schemaVersion="1.4" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd">
   <vendor>LVGL</vendor>
   <name>lvgl</name>
   <description>LVGL (Light and Versatile Graphics Library) is a free and open-source graphics library providing everything you need to create an embedded GUI with easy-to-use graphical elements, beautiful visual effects and a low memory footprint.</description>
@@ -36,9 +36,72 @@
   <repository type="git">https://github.com/lvgl/lvgl.git</repository>
 
   <releases>
-    <release date="2022-04-13" version="1.0.3-alpha" url="https://raw.githubusercontent.com/lvgl/lvgl/master/env_support/cmsis-pack/LVGL.lvgl.1.0.3-alpha.pack">
+    <release date="2024-03-19" version="8.4.0" url="https://github.com/lvgl/lvgl/raw/v8.4.0/env_support/cmsis-pack/LVGL.lvgl.8.4.0.pack">
+      - LVGL 8.4.0
+      - Some minor fixes
+    </release>
+    <release date="2023-12-05" version="8.3.11" url="https://github.com/lvgl/lvgl/raw/v8.3.11/env_support/cmsis-pack/LVGL.lvgl.8.3.11.pack">
+      - LVGL 8.3.11
+      - Add LittleFS Library to LVGL8
+      - Backport Tiny TTF to LVGL8
+      - Some minor fixes
+    </release>
+    <release date="2023-09-19" version="8.3.10" url="https://github.com/lvgl/lvgl/raw/9e388055ec0bcad5179461e66d6dac6823129eee/env_support/cmsis-pack/LVGL.lvgl.8.3.10.pack">
+      - LVGL 8.3.10
+      - Some minor fixes
+    </release>
+    
+    <release date="2023-08-04" version="8.3.9" url="https://github.com/lvgl/lvgl/raw/bdf5bfb88ce107f16cf9128cf75e61394b3219d0/env_support/cmsis-pack/LVGL.lvgl.8.3.9.pack">
+      - LVGL 8.3.10
+      - Add snapshot, fragment, imgfont, gridnav, msg and monkey
+      - Other minor fixes
+    </release>
+    <release date="2023-07-04" version="8.3.8" url="https://github.com/lvgl/lvgl/raw/15433d69b9d8ae6aa74f49946874af81a0cc5921/env_support/cmsis-pack/LVGL.lvgl.8.3.8.pack">
+      - LVGL 8.3.8
+      - Add renesas-ra6m3 gpu adaptation
+      - Improve performance and add more features for PXP and VGLite
+      - Minor updates
+    </release>
+    <release date="2023-04-28" version="8.3.7" url="https://github.com/lvgl/lvgl/raw/2b56e04205481daa6575bd5f7ab5df59d11676eb/env_support/cmsis-pack/LVGL.lvgl.8.3.7.pack">
+      - LVGL 8.3.7
+      - Minor updates
+    </release>
+    <release date="2023-04-02" version="8.3.6" url="https://github.com/lvgl/lvgl/raw/6b0092c0d91b2c7bfded48e04cc7b486ed3a72bd/env_support/cmsis-pack/LVGL.lvgl.8.3.6.pack">
+      - LVGL 8.3.6 release
+      - Various fixes, See CHANGELOG.md
+    </release>
+    <release date="2023-02-06" version="8.3.5" url="https://github.com/lvgl/lvgl/raw/e7e8cf846dce96f7542e27b5c9655bab680c31a1/env_support/cmsis-pack/LVGL.lvgl.8.3.5.pack">
+      - LVGL 8.3.5 release
+      - Use LVGL version as the cmsis-pack version
+      - Fix GPU support for NXP PXP and NXP VGLite
+      - Rework stm32 DMA2D support
+      - Various fixes
+    </release>
+    <release date="2022-12-31" version="1.0.6-p1" url="https://github.com/lvgl/lvgl/raw/dbb15bb3ea0365373bc1ba8b182556f937e61e7d/env_support/cmsis-pack/LVGL.lvgl.1.0.6-p1.pack">
+      - LVGL 8.3.4 release
+      - Update GPU Arm-2D support
+      - Various fixes
+    </release>
+    <release date="2022-06-29" version="1.0.5" url="https://github.com/GorgonMeducer/lvgl/raw/922108dbbe6d1c0be1069c342ca8693afee8c169/env_support/cmsis-pack/LVGL.lvgl.1.0.5.pack">
+      - LVGL 8.3.0-dev
+      - Monthly update for June
+      - Add Pinyin as input method
+      - Update benchmark to support RGB565-A8
+      - Update support for layers
+    </release>
+    <release date="2022-05-31" version="1.0.4" url="https://github.com/lvgl/lvgl/raw/ce0605182c31e43abc8137ba21f237ec442735bc/env_support/cmsis-pack/LVGL.lvgl.1.0.4.pack">
+      - LVGL 8.3.0-dev
+      - Monthly update for May
+      - Update drawing service
+      - Update GPU support for Arm-2D library
+      - Update GPU support for NXP PXP/VGLite
+      - Improving the accuracy of benchmark. 
+      - Add new colour support for RGB565A8
+    </release>
+    <release date="2022-04-27" version="1.0.3" url="https://github.com/lvgl/lvgl/raw/b81437e96423826272cd42d5555373f15bfdf03a/env_support/cmsis-pack/LVGL.lvgl.1.0.3.pack">
       - LVGL 8.3.0-dev
       - Monthly update for April
+      - Add GPU support for SWM341-DMA2D
     </release>
     <release date="2022-03-27" version="1.0.2" url="https://github.com/lvgl/lvgl/raw/a5b9a1c210821f122fb7582378a9f1819b1dc821/env_support/cmsis-pack/LVGL.lvgl.1.0.2.pack">
       - LVGL 8.3.0-dev
@@ -135,6 +198,90 @@
             <require Cclass="Acceleration" Cgroup="Arm-2D"/>
         </condition>
 
+        <condition id="LVGL-GPU-Arm-2D">
+            <description>Enable LVGL Arm-2D GPU Support</description>
+            <require Cclass="LVGL" Cgroup="lvgl" Csub="Essential"/>
+            <!--<deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU Arm-2D"/>-->
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU STM32-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU SWM341-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-PXP"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-VGLite"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU GD32-IPA"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="LVGL-GPU-RA6M3-G2D"/>
+        </condition>
+        
+        <condition id="LVGL-GPU-STM32-DMA2D">
+            <description>Enable LVGL Arm-2D GPU Support</description>
+            <require Cclass="LVGL" Cgroup="lvgl" Csub="Essential"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU Arm-2D"/>
+            <!--<deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU STM32-DMA2D"/>-->
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU SWM341-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-PXP"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-VGLite"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU GD32-IPA"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="LVGL-GPU-RA6M3-G2D"/>
+        </condition>
+        
+        <condition id="LVGL-GPU-SWM341-DMA2D">
+            <description>Enable LVGL Arm-2D GPU Support</description>
+            <require Cclass="LVGL" Cgroup="lvgl" Csub="Essential"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU Arm-2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU STM32-DMA2D"/>
+            <!--<deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU SWM341-DMA2D"/>-->
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-PXP"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-VGLite"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU GD32-IPA"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="LVGL-GPU-RA6M3-G2D"/>
+        </condition>
+        
+        <condition id="LVGL-GPU-NXP-PXP">
+            <description>Enable LVGL Arm-2D GPU Support</description>
+            <require Cclass="LVGL" Cgroup="lvgl" Csub="Essential"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU Arm-2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU STM32-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU SWM341-DMA2D"/>
+            <!--<deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-PXP"/>-->
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-VGLite"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU GD32-IPA"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="LVGL-GPU-RA6M3-G2D"/>
+        </condition>
+        
+        <condition id="LVGL-GPU-NXP-VGLite">
+            <description>Enable LVGL Arm-2D GPU Support</description>
+            <require Cclass="LVGL" Cgroup="lvgl" Csub="Essential"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU Arm-2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU STM32-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU SWM341-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-PXP"/>
+            <!--<deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-VGLite"/>-->
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU GD32-IPA"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="LVGL-GPU-RA6M3-G2D"/>
+        </condition>
+        
+        <condition id="LVGL-GPU-GD32-IPA">
+            <description>Enable LVGL Arm-2D GPU Support</description>
+            <require Cclass="LVGL" Cgroup="lvgl" Csub="Essential"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU Arm-2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU STM32-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU SWM341-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-PXP"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-VGLite"/>
+            <!--<deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU GD32-IPA"/>-->
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="LVGL-GPU-RA6M3-G2D"/>
+        </condition>
+
+        <condition id="LVGL-GPU-RA6M3-G2D">
+            <description>Enable LVGL Arm-2D GPU Support</description>
+            <require Cclass="LVGL" Cgroup="lvgl" Csub="Essential"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU Arm-2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU STM32-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU SWM341-DMA2D"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-PXP"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU NXP-VGLite"/>
+            <deny Cclass="LVGL" Cgroup="lvgl" Csub="GPU GD32-IPA"/>
+            <!--<deny Cclass="LVGL" Cgroup="lvgl" Csub="LVGL-GPU-RA6M3-G2D"/>-->
+        </condition>
+
     </conditions>
   <!-- apis section (optional - for Application Programming Interface descriptions) -->
   <!--
@@ -167,7 +314,7 @@
   -->
 
     <components>
-        <bundle Cbundle="LVGL" Cclass="LVGL" Cversion="8.3.0-dev">
+        <bundle Cbundle="LVGL" Cclass="LVGL" Cversion="8.4.0">
             <description>LVGL (Light and Versatile Graphics Library) is a free and open-source graphics library providing everything you need to create an embedded GUI with easy-to-use graphical elements, beautiful visual effects and a low memory footprint.</description>
             <doc></doc>
             <component Cgroup="lvgl" Csub="Essential" >
@@ -195,9 +342,11 @@
                 <file category="sourceC"            name="src/draw/lv_draw_arc.c" />
                 <file category="sourceC"            name="src/draw/lv_draw_img.c" />
                 <file category="sourceC"            name="src/draw/lv_draw_label.c" />
+                <file category="sourceC"            name="src/draw/lv_draw_layer.c" />
                 <file category="sourceC"            name="src/draw/lv_draw_line.c" />
                 <file category="sourceC"            name="src/draw/lv_draw_mask.c" />
                 <file category="sourceC"            name="src/draw/lv_draw_rect.c" />
+                <file category="sourceC"            name="src/draw/lv_draw_transform.c" />
                 <file category="sourceC"            name="src/draw/lv_draw_triangle.c" />
                 <file category="sourceC"            name="src/draw/lv_img_buf.c" />
                 <file category="sourceC"            name="src/draw/lv_img_cache.c" />
@@ -210,10 +359,13 @@
                 <file category="sourceC"            name="src/draw/sw/lv_draw_sw_dither.c" />
                 <file category="sourceC"            name="src/draw/sw/lv_draw_sw_gradient.c" />
                 <file category="sourceC"            name="src/draw/sw/lv_draw_sw_img.c" />
+                <file category="sourceC"            name="src/draw/sw/lv_draw_sw_layer.c" />
                 <file category="sourceC"            name="src/draw/sw/lv_draw_sw_letter.c" />
                 <file category="sourceC"            name="src/draw/sw/lv_draw_sw_line.c" />
                 <file category="sourceC"            name="src/draw/sw/lv_draw_sw_polygon.c" />
                 <file category="sourceC"            name="src/draw/sw/lv_draw_sw_rect.c" />
+                <file category="sourceC"            name="src/draw/sw/lv_draw_sw_transform.c" />
+                
 
                 <!-- src/font -->
                 <file category="sourceC"            name="src/font/lv_font.c" />
@@ -295,10 +447,18 @@
                 <file category="sourceC"            name="src/widgets/lv_textarea.c" />
 
                 <!-- general -->
-                <file category="preIncludeGlobal"   name="lv_conf_cmsis.h" attr="config" version="1.0.0" />
+                <file category="preIncludeGlobal"   name="lv_conf_cmsis.h" attr="config" version="1.0.5" />
                 <file category="sourceC"            name="lv_cmsis_pack.c" attr="config" version="1.0.0" />
                 <file category="header"             name="lvgl.h" />
                 <file category="doc"                name="README.md"/>
+                
+                <!-- code template -->
+                <file category="header"       name="examples/porting/lv_port_disp_template.h"   attr="template" select="Display port template"          version="2.0.0"/>
+                <file category="sourceC"      name="examples/porting/lv_port_disp_template.c"   attr="template" select="Display port template"          version="2.0.0"/>
+                <file category="header"       name="examples/porting/lv_port_indev_template.h"  attr="template" select="Input devices port template"    version="2.0.0"/>
+                <file category="sourceC"      name="examples/porting/lv_port_indev_template.c"  attr="template" select="Input devices port template"    version="2.0.0"/>
+                <file category="header"       name="examples/porting/lv_port_fs_template.h"     attr="template" select="File system port template"      version="2.0.0"/>
+                <file category="sourceC"      name="examples/porting/lv_port_fs_template.c"     attr="template" select="File system port template"      version="2.0.0"/>
 
               </files>
 
@@ -306,6 +466,7 @@
 
 /*! \brief use lv_config_cmsis.h which will be pre-included */
 #define LV_CONF_SKIP
+#define LV_LVGL_H_INCLUDE_SIMPLE    1
               </Pre_Include_Global_h>
 
                <RTE_Components_h>
@@ -319,8 +480,8 @@
             <component Cgroup="lvgl" Csub="Porting"  condition="LVGL-Essential">
               <description>Porting Templates</description>
               <files>
-                <file category="header"     name="examples/porting/lv_port_disp_template.h" attr="config" version="1.0.0" />
-                <file category="sourceC"    name="examples/porting/lv_port_disp_template.c" attr="config" version="1.0.0" />
+                <file category="header"     name="examples/porting/lv_port_disp_template.h" attr="config" version="1.0.1" />
+                <file category="sourceC"    name="examples/porting/lv_port_disp_template.c" attr="config" version="1.0.1" />
 
                 <file category="header"     name="examples/porting/lv_port_indev_template.h" attr="config" version="1.0.0" />
                 <file category="sourceC"    name="examples/porting/lv_port_indev_template.c" attr="config" version="1.0.0" />
@@ -330,7 +491,7 @@
               </files>
             </component>
 
-            <component Cgroup="lvgl" Csub="GPU Arm-2D"  condition="LVGL-Essential" Cversion="1.0.2">
+            <component Cgroup="lvgl" Csub="GPU Arm-2D"  condition="LVGL-GPU-Arm-2D" Cversion="1.2.2">
               <description>A 2D image processing library from Arm (i.e. Arm-2D) for All Cortex-M processors including Cortex-M0</description>
               <files>
               <file category="sourceC"      name="src/draw/arm2d/lv_gpu_arm2d.c" condition="Arm-2D"/>
@@ -345,7 +506,7 @@
 
             </component>
 
-            <component Cgroup="lvgl" Csub="GPU STM32-DMA2D"  condition="LVGL-Essential">
+            <component Cgroup="lvgl" Csub="GPU STM32-DMA2D"  condition="LVGL-GPU-STM32-DMA2D">
               <description>An hardware acceleration from STM32-DMA2D</description>
               <files>
               <file category="sourceC"            name="src/draw/stm32_dma2d/lv_gpu_stm32_dma2d.c" />
@@ -359,11 +520,27 @@
 
             </component>
 
-            <component Cgroup="lvgl" Csub="GPU NXP-PXP"  condition="LVGL-Essential">
+            <component Cgroup="lvgl" Csub="GPU SWM341-DMA2D"  condition="LVGL-GPU-SWM341-DMA2D">
+              <description>An hardware acceleration from SWM341-DMA2D</description>
+              <files>
+              <file category="sourceC"            name="src/draw/swm341_dma2d/lv_gpu_swm341_dma2d.c" />
+              </files>
+              
+              <RTE_Components_h>
+              
+/*! \brief enable SWM341 DMA2D */
+#define LV_USE_GPU_SWM341_DMA2D      1
+              </RTE_Components_h>
+              
+            </component>
+            
+            <component Cgroup="lvgl" Csub="GPU NXP-PXP"  condition="LVGL-GPU-NXP-PXP">
               <description>An hardware acceleration from NXP-PXP</description>
               <files>
-              <file category="sourceC"            name="src/draw/nxp_pxp/lv_gpu_nxp_pxp.c" />
-              <file category="sourceC"            name="src/draw/nxp_pxp/lv_gpu_nxp_pxp_osa.c" />
+                <file category="sourceC"            name="src/draw/nxp/pxp/lv_draw_pxp.c" />
+                <file category="sourceC"            name="src/draw/nxp/pxp/lv_draw_pxp_blend.c" />
+                <file category="sourceC"            name="src/draw/nxp/pxp/lv_gpu_nxp_pxp.c" />
+                <file category="sourceC"            name="src/draw/nxp/pxp/lv_gpu_nxp_pxp_osa.c" />
               </files>
 
               <RTE_Components_h>
@@ -374,10 +551,16 @@
 
             </component>
 
-            <component Cgroup="lvgl" Csub="GPU NXP-VGLite"  condition="LVGL-Essential">
+            <component Cgroup="lvgl" Csub="GPU NXP-VGLite"  condition="LVGL-GPU-NXP-VGLite">
               <description>An hardware acceleration from NXP-VGLite</description>
               <files>
-              <file category="sourceC"            name="src/draw/nxp_vglite/lv_gpu_nxp_vglite.c" />
+                <file category="sourceC"            name="src/draw/nxp/vglite/lv_draw_vglite.c" />
+                <file category="sourceC"            name="src/draw/nxp/vglite/lv_draw_vglite_arc.c" />
+                <file category="sourceC"            name="src/draw/nxp/vglite/lv_draw_vglite_blend.c" />
+                <file category="sourceC"            name="src/draw/nxp/vglite/lv_draw_vglite_line.c" />
+                <file category="sourceC"            name="src/draw/nxp/vglite/lv_draw_vglite_rect.c" />
+                <file category="sourceC"            name="src/draw/nxp/vglite/lv_vglite_buf.c" />
+                <file category="sourceC"            name="src/draw/nxp/vglite/lv_vglite_utils.c" />
               </files>
 
               <RTE_Components_h>
@@ -386,6 +569,22 @@
 #define LV_USE_GPU_NXP_VG_LITE          1
               </RTE_Components_h>
 
+            </component>
+
+
+            <component Cgroup="lvgl" Csub="GPU RA6M3-G2D"  condition="LVGL-GPU-RA6M3-G2D">
+              <description>An hardware acceleration from Renesas RA6M3-G2D</description>
+              <files>
+                <file category="sourceC"            name="src/draw/renesas/lv_gpu_d2_draw_label.c" />
+                <file category="sourceC"            name="src/draw/renesas/lv_gpu_d2_ra6m3.c" />
+              </files>
+              
+              <RTE_Components_h>
+              
+/*! \brief enable RA6M3-G2D */
+#define LV_USE_GPU_RA6M3_G2D      1
+              </RTE_Components_h>
+              
             </component>
 
             <component Cgroup="lvgl" Csub="Extra Themes"  condition="LVGL-Essential">
@@ -533,9 +732,26 @@
                 <file category="sourceC"            name="src/extra/libs/fsdrv/lv_fs_fatfs.c" />
                 <file category="sourceC"            name="src/extra/libs/fsdrv/lv_fs_posix.c" />
                 <file category="sourceC"            name="src/extra/libs/fsdrv/lv_fs_stdio.c" />
+                <file category="sourceC"            name="src/extra/libs/fsdrv/lv_fs_littlefs.c" />
               </files>
 
             </component>
+            
+            <component Cgroup="lvgl" Csub="Libs Tiny TTF"  condition="LVGL-Essential">
+              <description>Add Tiny TTF Library</description>
+              <files>
+                <!-- src/extra/libs/tiny_ttf -->
+                <file category="sourceC"            name="src/extra/libs/tiny_ttf/lv_tiny_ttf.c" />
+              </files>
+              
+              <RTE_Components_h>
+
+/*! \brief enable Tiny TTF Library */
+#define LV_USE_TINY_TTF         1
+              </RTE_Components_h>
+              
+            </component>
+
 
             <component Cgroup="lvgl" Csub="Libs RLOTTIE"  condition="LVGL-Essential">
               <description>Add RLOTTIE support, an extra librbary is required.</description>
@@ -547,7 +763,7 @@
               <RTE_Components_h>
 
 /*! \brief enable RLOTTIE support */
-#define LV_USE_RLOTTIE         1
+#define LV_USE_RLOTTIE          1
               </RTE_Components_h>
 
             </component>
@@ -562,7 +778,113 @@
               <RTE_Components_h>
 
 /*! \brief enable ffmpeg support */
-#define LV_USE_FFMPEG         1
+#define LV_USE_FFMPEG           1
+              </RTE_Components_h>
+
+            </component>
+
+            <component Cgroup="lvgl" Csub="Pinyin"  condition="LVGL-Essential">
+              <description>Add Pinyin input method</description>
+              <files>
+                <!-- src/extra/others/ime -->
+                <file category="sourceC"            name="src/extra/others/ime/lv_ime_pinyin.c" />
+              </files>
+
+              <RTE_Components_h>
+
+/*! \brief enable ffmpeg support */
+#define LV_USE_IME_PINYIN       1
+              </RTE_Components_h>
+
+            </component>
+
+            <component Cgroup="lvgl" Csub="Snapshot"  condition="LVGL-Essential">
+              <description>Add the Snapshot service</description>
+              <files>
+                <!-- src/extra/others/snapshot -->
+                <file category="sourceC"            name="src/extra/others/snapshot/lv_snapshot.c" />
+              </files>
+
+              <RTE_Components_h>
+
+/*! \brief enable snapshot support */
+#define LV_USE_SNAPSHOT         1
+              </RTE_Components_h>
+
+            </component>
+
+            <component Cgroup="lvgl" Csub="Fragment"  condition="LVGL-Essential">
+              <description>Add the Fragment service</description>
+              <files>
+                <!-- src/extra/others/fragment -->
+                <file category="sourceC"            name="src/extra/others/fragment/lv_fragment.c" />
+                <file category="sourceC"            name="src/extra/others/fragment/lv_fragment_manager.c" />
+              </files>
+
+              <RTE_Components_h>
+
+/*! \brief enable fragment support */
+#define LV_USE_FRAGMENT         1
+              </RTE_Components_h>
+
+            </component>
+
+            <component Cgroup="lvgl" Csub="Grid Navigation"  condition="LVGL-Essential">
+              <description>Add the Grid Navigation service</description>
+              <files>
+                <!-- src/extra/others/gridnav -->
+                <file category="sourceC"            name="src/extra/others/gridnav/lv_gridnav.c" />
+              </files>
+
+              <RTE_Components_h>
+
+/*! \brief enable the Grid Navigation support*/
+#define LV_USE_GRIDNAV          1
+              </RTE_Components_h>
+
+            </component>
+
+            <component Cgroup="lvgl" Csub="Image Font"  condition="LVGL-Essential">
+              <description>Add the Image Font service</description>
+              <files>
+                <!-- src/extra/others/imgfont -->
+                <file category="sourceC"            name="src/extra/others/imgfont/lv_imgfont.c" />
+              </files>
+
+              <RTE_Components_h>
+
+/*! \brief enable the image font support*/
+#define LV_USE_IMGFONT          1
+              </RTE_Components_h>
+
+            </component>
+
+            <component Cgroup="lvgl" Csub="Monkey"  condition="LVGL-Essential">
+              <description>Add the Monkey service</description>
+              <files>
+                <!-- src/extra/others/monkey -->
+                <file category="sourceC"            name="src/extra/others/monkey/lv_monkey.c" />
+              </files>
+
+              <RTE_Components_h>
+
+/*! \brief enable the monkey service support*/
+#define LV_USE_MONKEY           1
+              </RTE_Components_h>
+
+            </component>
+
+            <component Cgroup="lvgl" Csub="Message"  condition="LVGL-Essential">
+              <description>Add the Message service</description>
+              <files>
+                <!-- src/extra/others/msg -->
+                <file category="sourceC"            name="src/extra/others/msg/lv_msg.c" />
+              </files>
+
+              <RTE_Components_h>
+
+/*! \brief enable the message service support*/
+#define LV_USE_MSG              1
               </RTE_Components_h>
 
             </component>
@@ -579,6 +901,8 @@
                 <file category="sourceC"            name="demos/benchmark/assets/img_benchmark_cogwheel_chroma_keyed.c" />
                 <file category="sourceC"            name="demos/benchmark/assets/img_benchmark_cogwheel_indexed16.c" />
                 <file category="sourceC"            name="demos/benchmark/assets/img_benchmark_cogwheel_rgb.c" />
+                <file category="sourceC"            name="demos/benchmark/assets/img_benchmark_cogwheel_rgb565a8.c" />
+                
                 <file category="sourceC"            name="demos/benchmark/assets/lv_font_bechmark_montserrat_12_compr_az.c.c" />
                 <file category="sourceC"            name="demos/benchmark/assets/lv_font_bechmark_montserrat_16_compr_az.c.c" />
                 <file category="sourceC"            name="demos/benchmark/assets/lv_font_bechmark_montserrat_28_compr_az.c.c" />
@@ -589,7 +913,7 @@
               <RTE_Components_h>
 
 /*! \brief enable demo:bencharmk */
-#define LV_USE_DEMO_BENCHMARK         1
+#define LV_USE_DEMO_BENCHMARK    1
               </RTE_Components_h>
 
             </component>
@@ -609,7 +933,7 @@
               <RTE_Components_h>
 
 /*! \brief enable demo:widgets support */
-#define LV_USE_DEMO_WIDGETS         1
+#define LV_USE_DEMO_WIDGETS     1
               </RTE_Components_h>
 
             </component>

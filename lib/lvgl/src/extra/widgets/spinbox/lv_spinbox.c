@@ -157,7 +157,7 @@ void lv_spinbox_set_range(lv_obj_t * obj, int32_t range_min, int32_t range_max)
  * @param spinbox pointer to spinbox
  * @param pos selected position in spinbox
  */
-void lv_spinbox_set_pos(lv_obj_t * obj, uint8_t pos)
+void lv_spinbox_set_cursor_pos(lv_obj_t * obj, uint8_t pos)
 {
     LV_ASSERT_OBJ(obj, MY_CLASS);
     lv_spinbox_t * spinbox = (lv_spinbox_t *)obj;
@@ -433,9 +433,6 @@ static void lv_spinbox_event(const lv_obj_class_t * class_p, lv_event_t * e)
         }
         else if(c == LV_KEY_DOWN) {
             lv_spinbox_decrement(obj);
-        }
-        else {
-            lv_textarea_add_char(obj, c);
         }
     }
 }

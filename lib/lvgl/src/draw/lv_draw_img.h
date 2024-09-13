@@ -31,7 +31,7 @@ extern "C" {
 
 typedef struct {
 
-    uint16_t angle;
+    int16_t angle;
     uint16_t zoom;
     lv_point_t pivot;
 
@@ -61,7 +61,6 @@ void lv_draw_img_dsc_init(lv_draw_img_dsc_t * dsc);
  */
 void lv_draw_img(struct _lv_draw_ctx_t * draw_ctx, const lv_draw_img_dsc_t * dsc, const lv_area_t * coords,
                  const void * src);
-
 
 void lv_draw_img_decoded(struct _lv_draw_ctx_t * draw_ctx, const lv_draw_img_dsc_t * dsc,
                          const lv_area_t * coords, const uint8_t * map_p, lv_img_cf_t color_format);

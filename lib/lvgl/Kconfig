@@ -1,4 +1,4 @@
-# Kconfig file for LVGL v8.0
+# Kconfig file for LVGL v8.4
 
 menu "LVGL configuration"
 
@@ -6,7 +6,7 @@ menu "LVGL configuration"
     # without lv_conf.h file, the lv_conf_internal.h and
     # lv_conf_kconfig.h files are used instead.
     config LV_CONF_SKIP
-        bool
+        bool "Uncheck this to use custom lv_conf.h"
         default y
 
     config LV_CONF_MINIMAL
@@ -42,11 +42,9 @@ menu "LVGL configuration"
 
         config LV_COLOR_SCREEN_TRANSP
             bool "Enable more complex drawing routines to manage screens transparency."
-            depends on LV_COLOR_DEPTH_32
             help
                 Can be used if the UI is above another layer, e.g. an OSD menu or video player.
-                Requires `LV_COLOR_DEPTH = 32` colors and the screen's `bg_opa` should be set to
-                non LV_OPA_COVER value
+                The screen's `bg_opa` should be set to non LV_OPA_COVER value
 
         config LV_COLOR_MIX_ROUND_OFS
             int "Adjust color mix functions rounding"
@@ -156,6 +154,15 @@ menu "LVGL configuration"
                     radiuses are saved).
                     Set to 0 to disable caching.
 
+            config LV_LAYER_SIMPLE_BUF_SIZE
+                int "Optimal size to buffer the widget with opacity"
+                default 24576
+                help
+                    "Simple layers" are used when a widget has `style_opa < 255`
+                    to buffer the widget into a layer and blend it as an image
+                    with the given opacity. Note that `bg_opa`, `text_opa` etc
+                    don't require buffering into layer.
+
             config LV_IMG_CACHE_DEF_SIZE
                 int "Default image cache size. 0 to disable caching."
                 default 0
@@ -205,17 +212,14 @@ menu "LVGL configuration"
         endmenu
 
         menu "GPU"
-            config LV_USE_EXTERNAL_RENDERER
-                bool
-                
             config LV_USE_GPU_ARM2D
                 bool "Enable Arm's 2D image processing library (Arm-2D) for all Cortex-M processors."
-            config LV_USE_GPU_STM32_DMA2D
-                bool "Enable STM32 DMA2D (aka Chrom Art) GPU."
                 default n
                 help
                     Must deploy arm-2d library to your project and add include PATH for "arm_2d.h".
-                
+
+            config LV_USE_GPU_STM32_DMA2D
+                bool "Enable STM32 DMA2D (aka Chrom Art) GPU."
             config LV_GPU_DMA2D_CMSIS_INCLUDE
                 string "include path of CMSIS header of target processor"
                 depends on LV_USE_GPU_STM32_DMA2D
@@ -223,6 +227,26 @@ menu "LVGL configuration"
                 help
                     Must be defined to include path of CMSIS header of target processor
                     e.g. "stm32f769xx.h" or "stm32f429xx.h"
+
+            config LV_USE_GPU_RA6M3_G2D
+                bool "Enable RA6M3 G2D GPU."
+            config LV_GPU_RA6M3_G2D_INCLUDE
+                string "include path of target processor"
+                depends on LV_USE_GPU_RA6M3_G2D
+                default "hal_data.h"
+                help
+                    Must be defined to include path of target processor
+                    e.g. "hal_data.h"
+
+            config LV_USE_GPU_SWM341_DMA2D
+                bool "Enable SWM341 DMA2D GPU."
+            config LV_GPU_SWM341_DMA2D_INCLUDE
+                string "include path of CMSIS header of target processor"
+                depends on LV_USE_GPU_SWM341_DMA2D
+                default "SWM341.h"
+                help
+                    Must be defined to include path of CMSIS header of target processor
+                    e.g. "SWM341.h"
 
             config LV_USE_GPU_NXP_PXP
                 bool "Use NXP's PXP GPU iMX RTxxx platforms."
@@ -244,12 +268,17 @@ menu "LVGL configuration"
 
             config LV_USE_GPU_SDL
                 bool "Use SDL renderer API"
-                select LV_USE_EXTERNAL_RENDERER
                 default n
             config LV_GPU_SDL_INCLUDE_PATH
                 string "include path of SDL header"
                 depends on LV_USE_GPU_SDL
                 default "SDL2/SDL.h"
+            config LV_GPU_SDL_LRU_SIZE
+                int "Maximum buffer size to allocate for rotation"
+                depends on LV_USE_GPU_SDL
+                default 8388608
+                help
+                    Texture cache size, 8MB by default.
         endmenu
 
         menu "Logging"
@@ -380,7 +409,7 @@ menu "LVGL configuration"
                     bool "Left middle"
                 config LV_PERF_MONITOR_ALIGN_RIGHT_MID
                     bool "Right middle"
-                config LV_PERF_MONITOR_ALIGN_BOTTOM_CENTER
+                config LV_PERF_MONITOR_ALIGN_CENTER
                     bool "Center"
             endchoice
 
@@ -409,7 +438,7 @@ menu "LVGL configuration"
                     bool "Left middle"
                 config LV_MEM_MONITOR_ALIGN_RIGHT_MID
                     bool "Right middle"
-                config LV_MEM_MONITOR_ALIGN_BOTTOM_CENTER
+                config LV_MEM_MONITOR_ALIGN_CENTER
                     bool "Center"
             endchoice
 
@@ -634,6 +663,10 @@ menu "LVGL configuration"
                 Set the pixel order of the display.
                 Important only if "subpx fonts" are used.
                 With "normal" font it doesn't matter.
+
+        config LV_USE_FONT_PLACEHOLDER
+            bool "Enable drawing placeholders when glyph dsc is not found."
+            default y
     endmenu
 
     menu "Text Settings"
@@ -821,6 +854,13 @@ menu "LVGL configuration"
         config LV_USE_MSGBOX
             bool "Msgbox."
             default y if !LV_CONF_MINIMAL
+        config LV_USE_SPAN
+            bool "span"
+            default y if !LV_CONF_MINIMAL
+        config LV_SPAN_SNIPPET_STACK_SIZE
+            int "Maximum number of span descriptor"
+            default 64
+            depends on LV_USE_SPAN
         config LV_USE_SPINBOX
             bool "Spinbox."
             default y if !LV_CONF_MINIMAL
@@ -836,13 +876,6 @@ menu "LVGL configuration"
         config LV_USE_WIN
             bool "Win"
             default y if !LV_CONF_MINIMAL
-        config LV_USE_SPAN
-            bool "span"
-            default y if !LV_CONF_MINIMAL
-        config LV_SPAN_SNIPPET_STACK_SIZE
-            int "Maximum number of span descriptor"
-            default 64
-            depends on LV_USE_SPAN
     endmenu
 
     menu "Themes"
@@ -881,13 +914,15 @@ menu "LVGL configuration"
         config LV_USE_FS_STDIO
             bool "File system on top of stdio API"
         config LV_FS_STDIO_LETTER
-            string "Set an upper cased letter on which the drive will accessible (e.g. 'A' i.e. 65 )"
+            int "Set an upper cased letter on which the drive will accessible (e.g. 'A' i.e. 65 )"
+            default 0
             depends on LV_USE_FS_STDIO
         config LV_FS_STDIO_PATH
             string "Set the working directory"
             depends on LV_USE_FS_STDIO
         config LV_FS_STDIO_CACHE_SIZE
-            string ">0 to cache this number of bytes in lv_fs_read()"
+            int ">0 to cache this number of bytes in lv_fs_read()"
+            default 0
             depends on LV_USE_FS_STDIO
 
         config LV_USE_FS_POSIX
@@ -929,6 +964,17 @@ menu "LVGL configuration"
             default 0
             depends on LV_USE_FS_FATFS
 
+        config LV_USE_FS_LITTLEFS
+            bool "File system on top of LittleFS"
+        config LV_FS_LITTLEFS_LETTER
+            int "Set an upper cased letter on which the drive will accessible (e.g. 'A' i.e. 65)"
+            default 0
+            depends on LV_USE_FS_LITTLEFS
+        config LV_FS_LITTLEFS_CACHE_SIZE
+            int ">0 to cache this number of bytes in lv_fs_read()"
+            default 0
+            depends on LV_USE_FS_LITTLEFS
+
         config LV_USE_PNG
             bool "PNG decoder library"
 
@@ -965,6 +1011,13 @@ menu "LVGL configuration"
             endmenu
         endif
 
+        config LV_USE_TINY_TTF
+            bool "Tiny TTF library"
+        config LV_TINY_TTF_FILE_SUPPORT
+            bool "Load TTF data from files"
+            depends on LV_USE_TINY_TTF
+            default n
+
         config LV_USE_RLOTTIE
             bool "Lottie library"
 
@@ -987,15 +1040,44 @@ menu "LVGL configuration"
 
         config LV_USE_GRIDNAV
             bool "Enable grid navigation"
-            default n 
+            default n
 
         config LV_USE_FRAGMENT
             bool "Enable lv_obj fragment"
-            default n 
+            default n
 
         config LV_USE_IMGFONT
             bool "draw img in label or span obj"
             default n
+
+        config LV_USE_MSG
+            bool "Enable a published subscriber based messaging system"
+            default n
+
+        config LV_USE_IME_PINYIN
+            bool "Enable Pinyin input method"
+            default n
+        config LV_IME_PINYIN_USE_K9_MODE
+            bool "Enable Pinyin input method 9 key input mode"
+            depends on LV_USE_IME_PINYIN
+            default n
+        config LV_IME_PINYIN_K9_CAND_TEXT_NUM
+            int "Maximum number of candidate panels for 9-key input mode"
+            depends on LV_IME_PINYIN_USE_K9_MODE
+            default 3
+        config LV_IME_PINYIN_USE_DEFAULT_DICT
+            bool "Use built-in Thesaurus"
+            depends on LV_USE_IME_PINYIN
+            default y
+            help
+                If you do not use the default thesaurus, be sure to use lv_ime_pinyin after setting the thesauruss
+        config LV_IME_PINYIN_CAND_TEXT_NUM
+            int "Maximum number of candidate panels"
+            depends on LV_USE_IME_PINYIN
+            default 6
+            help
+                Set the maximum number of candidate panels that can be displayed.
+                This needs to be adjusted according to the size of the screen.
     endmenu
 
     menu "Examples"
@@ -1019,6 +1101,10 @@ menu "LVGL configuration"
 
         config LV_USE_DEMO_BENCHMARK
             bool "Benchmark your system"
+            default n
+        config LV_DEMO_BENCHMARK_RGB565A8
+            bool "Use RGB565A8 images with 16 bit color depth instead of ARGB8565"
+            depends on LV_USE_DEMO_BENCHMARK
             default n
 
         config LV_USE_DEMO_STRESS

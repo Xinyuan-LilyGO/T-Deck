@@ -50,6 +50,7 @@ typedef enum {
     LV_GPU_CACHE_KEY_MAGIC_RECT_BG = 0x31,
     LV_GPU_CACHE_KEY_MAGIC_RECT_SHADOW = 0x32,
     LV_GPU_CACHE_KEY_MAGIC_RECT_BORDER = 0x33,
+    LV_GPU_CACHE_KEY_MAGIC_RECT_GRAD = 0x34,
     LV_GPU_CACHE_KEY_MAGIC_FONT_GLYPH = 0x41,
     LV_GPU_CACHE_KEY_MAGIC_MASK = 0x51,
 } lv_sdl_cache_key_magic_t;
@@ -81,9 +82,15 @@ SDL_Texture * lv_draw_sdl_texture_cache_get(lv_draw_sdl_ctx_t * ctx, const void 
 SDL_Texture * lv_draw_sdl_texture_cache_get_with_userdata(lv_draw_sdl_ctx_t * ctx, const void * key, size_t key_length,
                                                           bool * found, void ** userdata);
 
-void lv_draw_sdl_texture_cache_put(lv_draw_sdl_ctx_t * ctx, const void * key, size_t key_length, SDL_Texture * texture);
+/**
+ * @return Whether the texture has been put in the cache
+ */
+bool lv_draw_sdl_texture_cache_put(lv_draw_sdl_ctx_t * ctx, const void * key, size_t key_length, SDL_Texture * texture);
 
-void lv_draw_sdl_texture_cache_put_advanced(lv_draw_sdl_ctx_t * ctx, const void * key, size_t key_length,
+/**
+ * @return Whether the texture has been put in the cache
+ */
+bool lv_draw_sdl_texture_cache_put_advanced(lv_draw_sdl_ctx_t * ctx, const void * key, size_t key_length,
                                             SDL_Texture * texture, void * userdata, void userdata_free(void *),
                                             lv_draw_sdl_cache_flag_t flags);
 

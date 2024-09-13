@@ -60,11 +60,19 @@ props = [
 
 {'name': 'TRANSFORM_ZOOM',
  'style_type': 'num',   'var_type': 'lv_coord_t',  'default':0, 'inherited': 0, 'layout': 1, 'ext_draw': 1,
- 'dsc': "Zoom image-like objects. Multiplied with the zoom set on the object. The value 256 (or `LV_IMG_ZOOM_NONE`) means normal size, 128 half size, 512 double size, and so on" },
+ 'dsc': "Zoom an objects. The value 256 (or `LV_IMG_ZOOM_NONE`) means normal size, 128 half size, 512 double size, and so on" },
 
 {'name': 'TRANSFORM_ANGLE',
  'style_type': 'num',   'var_type': 'lv_coord_t',  'default':0, 'inherited': 0, 'layout': 1, 'ext_draw': 1,
- 'dsc': "Rotate image-like objects. Added to the rotation set on the object. The value is interpreted in 0.1 degree units. E.g. 45 deg. = 450"},
+ 'dsc': "Rotate an objects. The value is interpreted in 0.1 degree units. E.g. 450 means 45 deg."},
+
+{'name': 'TRANSFORM_PIVOT_X',
+ 'style_type': 'num',   'var_type': 'lv_coord_t',  'default':0, 'inherited': 0, 'layout': 0, 'ext_draw': 0,
+ 'dsc': "Set the pivot point's X coordinate for transformations. Relative to the object's top left corner'"},
+
+{'name': 'TRANSFORM_PIVOT_Y',
+ 'style_type': 'num',   'var_type': 'lv_coord_t',  'default':0, 'inherited': 0, 'layout': 0, 'ext_draw': 0,
+ 'dsc': "Set the pivot point's Y coordinate for transformations. Relative to the object's top left corner'"},
 
 {'section': 'Padding', 'dsc' : "Properties to describe spacing between the parent's sides and the children and among the children. Very similar to the padding properties in HTML."},
 {'name': 'PAD_TOP',
@@ -155,7 +163,7 @@ props = [
 
 {'name': 'BORDER_WIDTH',
  'style_type': 'num',   'var_type': 'lv_coord_t' ,  'default':0, 'inherited': 0, 'layout': 1, 'ext_draw': 0,
- 'dsc': "Set hte width of the border. Only pixel values can be used."},
+ 'dsc': "Set the width of the border. Only pixel values can be used."},
 
 {'name': 'BORDER_SIDE',
  'style_type': 'num',   'var_type': 'lv_border_side_t',  'default':'`LV_BORDER_SIDE_NONE`', 'inherited': 0, 'layout': 0, 'ext_draw': 0,
@@ -308,6 +316,10 @@ props = [
  'style_type': 'num',   'var_type': 'lv_opa_t',  'default':'`LV_OPA_COVER`', 'inherited': 1, 'layout': 0, 'ext_draw': 0,
  'dsc': "Scale down all opacity values of the object by this factor. Value 0, `LV_OPA_0` or `LV_OPA_TRANSP` means fully transparent, 255, `LV_OPA_100` or `LV_OPA_COVER` means fully covering, other values or LV_OPA_10, LV_OPA_20, etc means semi transparency." },
 
+{'name': 'OPA_LAYERED',
+ 'style_type': 'num',   'var_type': 'lv_opa_t',  'default':'`LV_OPA_COVER`', 'inherited': 1, 'layout': 0, 'ext_draw': 0,
+ 'dsc': "First draw the object on the layer, then scale down layer opacity factor. Value 0, `LV_OPA_0` or `LV_OPA_TRANSP` means fully transparent, 255, `LV_OPA_100` or `LV_OPA_COVER` means fully covering, other values or LV_OPA_10, LV_OPA_20, etc means semi transparency." },
+
 {'name': 'COLOR_FILTER_DSC',
  'style_type': 'ptr',   'var_type': 'const lv_color_filter_dsc_t *',  'default':'`NULL`', 'inherited': 0, 'layout': 0, 'ext_draw': 0,
  'dsc': "Mix a color to all colors of the object." },
@@ -338,7 +350,7 @@ props = [
 
 {'name': 'LAYOUT',
  'style_type': 'num',   'var_type': 'uint16_t', 'default':0, 'inherited': 0, 'layout': 1, 'ext_draw': 0,
- 'dsc': "Set the layout if the object. The children will be repositioned and resized according to the policies set for the layout. For the possible values see the documentation of the layouts."},
+ 'dsc': "Set the layout of the object. The children will be repositioned and resized according to the policies set for the layout. For the possible values see the documentation of the layouts."},
 
 {'name': 'BASE_DIR',
  'style_type': 'num',   'var_type': 'lv_base_dir_t', 'default':'`LV_BASE_DIR_AUTO`', 'inherited': 1, 'layout': 1, 'ext_draw': 0,

@@ -3,7 +3,6 @@
  *
  */
 
-
 /*********************
  *      INCLUDES
  *********************/
@@ -64,7 +63,7 @@ void lv_fs_win32_init(void)
      * Register the file system interface in LVGL
      *--------------------------------------------------*/
 
-    /*Add a simple drive to open images*/
+    /*Add a simple driver to open images*/
     static lv_fs_drv_t fs_drv; /*A driver descriptor*/
     lv_fs_drv_init(&fs_drv);
 
@@ -362,7 +361,7 @@ static void * fs_dir_open(lv_fs_drv_t * drv, const char * path)
     dir_handle_t * handle = (dir_handle_t *)lv_mem_alloc(sizeof(dir_handle_t));
     handle->dir_p = INVALID_HANDLE_VALUE;
     handle->next_error = LV_FS_RES_OK;
-    WIN32_FIND_DATA fdata;
+    WIN32_FIND_DATAA fdata;
 
     /*Make the path relative to the current directory (the projects root folder)*/
     char buf[MAX_PATH_LEN];
@@ -373,7 +372,7 @@ static void * fs_dir_open(lv_fs_drv_t * drv, const char * path)
 #endif
 
     strcpy(handle->next_fn, "");
-    handle->dir_p = FindFirstFile(buf, &fdata);
+    handle->dir_p = FindFirstFileA(buf, &fdata);
     do {
         if(is_dots_name(fdata.cFileName)) {
             continue;
@@ -416,7 +415,7 @@ static lv_fs_res_t fs_dir_read(lv_fs_drv_t * drv, void * dir_p, char * fn)
     lv_fs_res_t current_error = handle->next_error;
     strcpy(handle->next_fn, "");
 
-    WIN32_FIND_DATA fdata;
+    WIN32_FIND_DATAA fdata;
 
     while(FindNextFileA(handle->dir_p, &fdata)) {
         if(is_dots_name(fdata.cFileName)) {

@@ -40,13 +40,11 @@ extern "C" {
  *Time between `LV_EVENT_LONG_PRESSED_REPEAT*/
 #define LV_INDEV_DEF_LONG_PRESS_REP_TIME  100
 
-
 /*Gesture threshold in pixels*/
 #define LV_INDEV_DEF_GESTURE_LIMIT        50
 
 /*Gesture min velocity at release before swipe (pixels)*/
 #define LV_INDEV_DEF_GESTURE_MIN_VELOCITY 3
-
 
 /**********************
  *      TYPEDEFS
@@ -141,6 +139,7 @@ typedef struct _lv_indev_proc_t {
         struct {
             /*Pointer and button data*/
             lv_point_t act_point; /**< Current point of input device.*/
+            lv_point_t indev_point;
             lv_point_t last_point; /**< Last point of input device.*/
             lv_point_t last_raw_point; /**< Last point read from read_cb. */
             lv_point_t vect; /**< Difference between `act_point` and `last_point`.*/

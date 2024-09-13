@@ -79,7 +79,6 @@ const lv_obj_class_t lv_dropdownlist_class = {
     .base_class = &lv_obj_class
 };
 
-
 /**********************
  *      MACROS
  **********************/
@@ -285,6 +284,10 @@ void lv_dropdown_set_selected(lv_obj_t * obj, uint16_t sel_opt)
     dropdown->sel_opt_id      = sel_opt < dropdown->option_cnt ? sel_opt : dropdown->option_cnt - 1;
     dropdown->sel_opt_id_orig = dropdown->sel_opt_id;
 
+    if(dropdown->list) {
+        position_to_selected(obj);
+    }
+
     lv_obj_invalidate(obj);
 }
 
@@ -403,20 +406,24 @@ int32_t lv_dropdown_get_option_index(lv_obj_t * obj, const char * option)
     const char * opts = lv_dropdown_get_options(obj);
     uint32_t char_i = 0;
     uint32_t opt_i = 0;
+    uint32_t option_len = strlen(option);
     const char * start = opts;
 
     while(start[char_i] != '\0') {
         for(char_i = 0; (start[char_i] != '\n') && (start[char_i] != '\0'); char_i++);
 
-        if(memcmp(start, option, LV_MIN(strlen(option), char_i)) == 0) return opt_i;
+        if(option_len == char_i && memcmp(start, option, LV_MIN(option_len, char_i)) == 0) {
+            return opt_i;
+        }
+
         start = &start[char_i];
         if(start[0] == '\n') start++;
+        char_i = 0;
         opt_i++;
     }
 
     return -1;
 }
-
 
 const char * lv_dropdown_get_symbol(lv_obj_t * obj)
 {
@@ -535,7 +542,7 @@ void lv_dropdown_open(lv_obj_t * dropdown_obj)
             lv_obj_align(label, LV_ALIGN_TOP_RIGHT, 0, 0);
             break;
         case LV_TEXT_ALIGN_CENTER:
-            lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
             break;
 
     }
@@ -768,7 +775,6 @@ static void lv_dropdown_list_event(const lv_obj_class_t * class_p, lv_event_t * 
         if(res != LV_RES_OK) return;
     }
 }
-
 
 static void draw_main(lv_event_t * e)
 {
@@ -1003,7 +1009,6 @@ static void draw_box_label(lv_obj_t * dropdown_obj, lv_draw_ctx_t * draw_ctx, ui
     list_obj->state = state_orig;
     list_obj->skip_trans = 0;
 }
-
 
 static lv_res_t btn_release_handler(lv_obj_t * obj)
 {

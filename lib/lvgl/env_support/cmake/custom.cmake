@@ -63,6 +63,18 @@ install(
   FILES_MATCHING
   PATTERN "*.h")
 
+install(
+  FILES "${LV_CONF_PATH}"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/${INC_INSTALL_DIR}/../"
+  RENAME "lv_conf.h"
+  OPTIONAL)
+
+configure_file("${LVGL_ROOT_DIR}/lvgl.pc.in" lvgl.pc @ONLY)
+
+install(
+  FILES "${CMAKE_BINARY_DIR}/lvgl.pc"
+  DESTINATION "${LIB_INSTALL_DIR}/pkgconfig/")
+
 set_target_properties(
   lvgl
   PROPERTIES OUTPUT_NAME lvgl

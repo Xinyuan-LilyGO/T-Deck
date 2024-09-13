@@ -217,6 +217,7 @@ static void gridnav_event_cb(lv_event_t * e)
         if(dsc->focused_obj == NULL)  dsc->focused_obj = find_first_focusable(obj);
         if(dsc->focused_obj) {
             lv_obj_add_state(dsc->focused_obj, LV_STATE_FOCUSED | LV_STATE_FOCUS_KEY);
+            lv_obj_clear_state(dsc->focused_obj, LV_STATE_PRESSED); /*Be sure the focuses obj is not stuck in pressed state*/
             lv_obj_scroll_to_view(dsc->focused_obj, LV_ANIM_OFF);
         }
     }
@@ -348,7 +349,7 @@ static lv_obj_t * find_last_focusable(lv_obj_t * obj)
 {
     uint32_t child_cnt = lv_obj_get_child_cnt(obj);
     int32_t i;
-    for(i = child_cnt - 1; i >= 0; i++) {
+    for(i = child_cnt - 1; i >= 0; i--) {
         lv_obj_t * child = lv_obj_get_child(obj, i);
         if(obj_is_focuable(child)) return child;
     }

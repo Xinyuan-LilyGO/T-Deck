@@ -52,7 +52,7 @@ static uint8_t hex_char_to_num(char hex);
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_label_dsc_init(lv_draw_label_dsc_t * dsc)
+void LV_ATTRIBUTE_FAST_MEM lv_draw_label_dsc_init(lv_draw_label_dsc_t * dsc)
 {
     lv_memset_00(dsc, sizeof(lv_draw_label_dsc_t));
     dsc->opa = LV_OPA_COVER;
@@ -74,7 +74,7 @@ void lv_draw_label_dsc_init(lv_draw_label_dsc_t * dsc)
  * @param hint pointer to a `lv_draw_label_hint_t` variable.
  * It is managed by the draw to speed up the drawing of very long texts (thousands of lines).
  */
-LV_ATTRIBUTE_FAST_MEM void lv_draw_label(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t * dsc,
+void LV_ATTRIBUTE_FAST_MEM lv_draw_label(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t * dsc,
                                          const lv_area_t * coords, const char * txt, lv_draw_label_hint_t * hint)
 {
     if(dsc->opa <= LV_OPA_MIN) return;
@@ -202,7 +202,7 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_label(lv_draw_ctx_t * draw_ctx, const lv_draw
     cmd_state_t cmd_state = CMD_STATE_WAIT;
     uint32_t i;
     uint32_t par_start = 0;
-    lv_color_t recolor;
+    lv_color_t recolor  = lv_color_black();
     lv_color_t color = lv_color_black();
     int32_t letter_w;
 
@@ -367,7 +367,6 @@ void lv_draw_letter(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t * dsc,  
     draw_ctx->draw_letter(draw_ctx, dsc, pos_p, letter);
 }
 
-
 /**********************
  *   STATIC FUNCTIONS
  **********************/
@@ -414,4 +413,3 @@ static uint8_t hex_char_to_num(char hex)
 
     return result;
 }
-

@@ -3,7 +3,6 @@
  *
  */
 
-
 /*********************
  *      INCLUDES
  *********************/
@@ -104,15 +103,15 @@ static void * fs_open(lv_fs_drv_t * drv, const char * path, lv_fs_mode_t mode)
     LV_UNUSED(drv);
 
     uint32_t flags = 0;
-    if(mode == LV_FS_MODE_WR) flags = O_WRONLY;
+    if(mode == LV_FS_MODE_WR) flags = O_WRONLY | O_CREAT;
     else if(mode == LV_FS_MODE_RD) flags = O_RDONLY;
-    else if(mode == (LV_FS_MODE_WR | LV_FS_MODE_RD)) flags = O_RDWR;
+    else if(mode == (LV_FS_MODE_WR | LV_FS_MODE_RD)) flags = O_RDWR | O_CREAT;
 
     /*Make the path relative to the current directory (the projects root folder)*/
     char buf[256];
     lv_snprintf(buf, sizeof(buf), LV_FS_POSIX_PATH "%s", path);
 
-    int f = open(buf, flags);
+    int f = open(buf, flags, 0666);
     if(f < 0) return NULL;
 
     return (void *)(lv_uintptr_t)f;
@@ -176,8 +175,8 @@ static lv_fs_res_t fs_write(lv_fs_drv_t * drv, void * file_p, const void * buf, 
 static lv_fs_res_t fs_seek(lv_fs_drv_t * drv, void * file_p, uint32_t pos, lv_fs_whence_t whence)
 {
     LV_UNUSED(drv);
-    lseek((lv_uintptr_t)file_p, pos, whence);
-    return LV_FS_RES_OK;
+    off_t offset = lseek((lv_uintptr_t)file_p, pos, whence);
+    return offset < 0 ? LV_FS_RES_FS_ERR : LV_FS_RES_OK;
 }
 
 /**
@@ -191,8 +190,9 @@ static lv_fs_res_t fs_seek(lv_fs_drv_t * drv, void * file_p, uint32_t pos, lv_fs
 static lv_fs_res_t fs_tell(lv_fs_drv_t * drv, void * file_p, uint32_t * pos_p)
 {
     LV_UNUSED(drv);
-    *pos_p = lseek((lv_uintptr_t)file_p, 0, SEEK_CUR);
-    return LV_FS_RES_OK;
+    off_t offset = lseek((lv_uintptr_t)file_p, 0, SEEK_CUR);
+    *pos_p = offset;
+    return offset < 0 ? LV_FS_RES_FS_ERR : LV_FS_RES_OK;
 }
 
 #ifdef WIN32

@@ -17,7 +17,7 @@ LVGL provides everything you need to create an embedded GUI with easy-to-use gra
 </h4>
 
 
-**English** | [中文](./README_zh.md) |
+**English** | [中文](./README_zh.md) | [Português do Brasil](./README_pt_BR.md)
 
 
 ---
@@ -40,7 +40,7 @@ LVGL provides everything you need to create an embedded GUI with easy-to-use gra
 * Multi-language support with UTF-8 handling, CJK, Bidirectional and Arabic script support
 * Fully customizable graphical elements via [CSS-like styles](https://docs.lvgl.io/master/overview/style.html)
 * Powerful layouts inspired by CSS: [Flexbox](https://docs.lvgl.io/master/layouts/flex.html) and [Grid](https://docs.lvgl.io/master/layouts/grid.html)
-* OS, External memory and GPU are supported but not required. (built in support for STM32 DMA2D, and NXP PXP and VGLite)
+* OS, External memory and GPU are supported but not required. (built in support for STM32 DMA2D, SWM341 DMA2D, and NXP PXP and VGLite)
 * Smooth rendering even with a [single frame buffer](https://docs.lvgl.io/master/porting/display.html)
 * Written in C and compatible with C++
 * Micropython Binding exposes [LVGL API in Micropython](https://blog.lvgl.io/2019-02-20/micropython-bindings)
@@ -99,15 +99,16 @@ Just to mention some platforms:
 - STM32F1, STM32F3, STM32F4, STM32F7, STM32L4, STM32L5, STM32H7
 - Microchip dsPIC33, PIC24, PIC32MX, PIC32MZ
 - [Linux frame buffer](https://blog.lvgl.io/2018-01-03/linux_fb) (/dev/fb)
-- [Raspberry Pi](http://www.vk3erw.com/index.php/16-software/63-raspberry-pi-official-7-touchscreen-and-littlevgl)
+- [Raspberry Pi](https://github.com/lvgl/lv_port_linux_frame_buffer)
 - [Espressif ESP32](https://github.com/lvgl/lv_port_esp32)
 - [Infineon Aurix](https://github.com/lvgl/lv_port_aurix)
 - Nordic NRF52 Bluetooth modules
 - Quectel modems
+- [SYNWIT SWM341](http://www.synwit.cn/)
 
 LVGL is also available as:
 - [Arduino library](https://docs.lvgl.io/master/get-started/platforms/arduino.html)
-- [PlatformIO package](https://platformio.org/lib/show/12440/lvgl)
+- [PlatformIO package](https://registry.platformio.org/libraries/lvgl/lvgl)
 - [Zephyr library](https://docs.zephyrproject.org/latest/reference/kconfig/CONFIG_LVGL.html)
 - [ESP32 component](https://docs.lvgl.io/master/get-started/platforms/espressif.html)
 - [NXP MCUXpresso component](https://www.nxp.com/design/software/embedded-software/lvgl-open-source-graphics-library:LITTLEVGL-OPEN-SOURCE-GRAPHICS-LIBRARY)

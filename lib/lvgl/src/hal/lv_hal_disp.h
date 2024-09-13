@@ -23,6 +23,7 @@ extern "C" {
 #include "../misc/lv_area.h"
 #include "../misc/lv_ll.h"
 #include "../misc/lv_timer.h"
+#include "../misc/lv_ll.h"
 
 /*********************
  *      DEFINES
@@ -117,7 +118,6 @@ typedef struct _lv_disp_drv_t {
 
     void (*clear_cb)(struct _lv_disp_drv_t * disp_drv, uint8_t * buf, uint32_t size);
 
-
     /** OPTIONAL: Called after every refresh cycle to tell the rendering and flushing time + the
      * number of flushed pixels*/
     void (*monitor_cb)(struct _lv_disp_drv_t * disp_drv, uint32_t time, uint32_t px);
@@ -173,10 +173,8 @@ typedef struct _lv_disp_t {
     struct _lv_obj_t * top_layer;   /**< @see lv_disp_get_layer_top*/
     struct _lv_obj_t * sys_layer;   /**< @see lv_disp_get_layer_sys*/
     uint32_t screen_cnt;
-uint8_t draw_prev_over_act  :
-    1;          /**< 1: Draw previous screen over active screen*/
-uint8_t del_prev  :
-    1;          /**< 1: Automatically delete the previous screen when the screen load animation is ready*/
+    uint8_t draw_prev_over_act : 1; /**< 1: Draw previous screen over active screen*/
+    uint8_t del_prev : 1;           /**< 1: Automatically delete the previous screen when the screen load anim. is ready*/
     uint8_t rendering_in_progress : 1; /**< 1: The current screen rendering is in progress*/
 
     lv_opa_t bg_opa;                /**<Opacity of the background color or wallpaper*/
@@ -187,6 +185,10 @@ uint8_t del_prev  :
     lv_area_t inv_areas[LV_INV_BUF_SIZE];
     uint8_t inv_area_joined[LV_INV_BUF_SIZE];
     uint16_t inv_p;
+    int32_t inv_en_cnt;
+
+    /** Double buffer sync areas */
+    lv_ll_t sync_areas;
 
     /*Miscellaneous data*/
     uint32_t last_activity_time;        /**< Last time when there was activity on this display*/
@@ -310,7 +312,6 @@ bool lv_disp_get_antialiasing(lv_disp_t * disp);
  */
 lv_coord_t lv_disp_get_dpi(const lv_disp_t * disp);
 
-
 /**
  * Set the rotation of this display.
  * @param disp pointer to a display (NULL to use the default display)
@@ -331,7 +332,7 @@ lv_disp_rot_t lv_disp_get_rotation(lv_disp_t * disp);
  * Call in the display driver's `flush_cb` function when the flushing is finished
  * @param disp_drv pointer to display driver in `flush_cb` where this function is called
  */
-LV_ATTRIBUTE_FLUSH_READY void lv_disp_flush_ready(lv_disp_drv_t * disp_drv);
+void /* LV_ATTRIBUTE_FLUSH_READY */ lv_disp_flush_ready(lv_disp_drv_t * disp_drv);
 
 /**
  * Tell if it's the last area of the refreshing process.
@@ -339,7 +340,7 @@ LV_ATTRIBUTE_FLUSH_READY void lv_disp_flush_ready(lv_disp_drv_t * disp_drv);
  * @param disp_drv pointer to display driver
  * @return true: it's the last area to flush; false: there are other areas too which will be refreshed soon
  */
-LV_ATTRIBUTE_FLUSH_READY bool lv_disp_flush_is_last(lv_disp_drv_t * disp_drv);
+bool /* LV_ATTRIBUTE_FLUSH_READY */ lv_disp_flush_is_last(lv_disp_drv_t * disp_drv);
 
 //! @endcond
 

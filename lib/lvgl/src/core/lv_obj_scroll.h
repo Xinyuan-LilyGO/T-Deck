@@ -15,6 +15,7 @@ extern "C" {
  *********************/
 #include "../misc/lv_area.h"
 #include "../misc/lv_anim.h"
+#include "../misc/lv_types.h"
 
 /*********************
  *      DEFINES
@@ -35,7 +36,6 @@ enum {
     LV_SCROLLBAR_MODE_AUTO,     /**< Show scroll bars when the content is large enough to be scrolled*/
 };
 typedef uint8_t lv_scrollbar_mode_t;
-
 
 /** Scroll span align options. Tells where to align the snappable children when scroll stops.*/
 enum {
@@ -249,6 +249,17 @@ void lv_obj_scroll_to_view(struct _lv_obj_t * obj, lv_anim_enable_t anim_en);
 void lv_obj_scroll_to_view_recursive(struct _lv_obj_t * obj, lv_anim_enable_t anim_en);
 
 /**
+ * Low level function to scroll by given x and y coordinates.
+ * `LV_EVENT_SCROLL` is sent.
+ * @param obj       pointer to an object to scroll
+ * @param x         pixels to scroll horizontally
+ * @param y         pixels to scroll vertically
+ * @return          `LV_RES_INV`: to object was deleted in `LV_EVENT_SCROLL`;
+ *                  `LV_RES_OK`: if the object is still valid
+ */
+lv_res_t _lv_obj_scroll_by_raw(struct _lv_obj_t * obj, lv_coord_t x, lv_coord_t y);
+
+/**
  * Tell whether an object is being scrolled or not at this moment
  * @param obj   pointer to an object
  * @return      true: `obj` is being scrolled
@@ -277,7 +288,7 @@ void lv_obj_get_scrollbar_area(struct _lv_obj_t * obj, lv_area_t * hor, lv_area_
 void lv_obj_scrollbar_invalidate(struct _lv_obj_t * obj);
 
 /**
- * Checked if the content is scrolled "in" and adjusts it to a normal position.
+ * Checks if the content is scrolled "in" and adjusts it to a normal position.
  * @param obj       pointer to an object
  * @param anim_en   LV_ANIM_ON/OFF
  */

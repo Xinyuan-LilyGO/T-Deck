@@ -46,8 +46,11 @@ static lv_obj_t * t2;
 
 void lv_demo_keypad_encoder(void)
 {
-    g = lv_group_create();
-    lv_group_set_default(g);
+    g = lv_group_get_default();
+    if(g == NULL) {
+        g = lv_group_create();
+        lv_group_set_default(g);
+    }
 
     lv_indev_t * cur_drv = NULL;
     for(;;) {
@@ -74,6 +77,12 @@ void lv_demo_keypad_encoder(void)
     text_input_create(t2);
 
     msgbox_create();
+}
+
+void lv_demo_keypad_encoder_close(void)
+{
+    lv_obj_clean(lv_scr_act());
+    lv_obj_clean(lv_layer_top());
 }
 
 /**********************
@@ -166,9 +175,6 @@ static void msgbox_create(void)
     lv_obj_add_event_cb(mbox, msgbox_event_cb, LV_EVENT_ALL, NULL);
     lv_group_focus_obj(lv_msgbox_get_btns(mbox));
     lv_obj_add_state(lv_msgbox_get_btns(mbox), LV_STATE_FOCUS_KEY);
-#if LV_EX_MOUSEWHEEL
-    lv_group_set_editing(g, true);
-#endif
     lv_group_focus_freeze(g, true);
 
     lv_obj_align(mbox, LV_ALIGN_CENTER, 0, 0);

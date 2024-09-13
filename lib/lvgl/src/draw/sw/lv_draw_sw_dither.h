@@ -15,7 +15,6 @@ extern "C" {
  *********************/
 #include "../../core/lv_obj_pos.h"
 
-
 /*********************
  *      DEFINES
  *********************/
@@ -39,29 +38,28 @@ typedef void (*lv_dither_func_t)(struct _lv_gradient_cache_t * grad, lv_coord_t 
 
 #endif
 
-
 /**********************
  *    PROTOTYPES
  **********************/
 #if LV_DRAW_COMPLEX
 #if _DITHER_GRADIENT
-LV_ATTRIBUTE_FAST_MEM void lv_dither_none(struct _lv_gradient_cache_t * grad, lv_coord_t x, lv_coord_t y, lv_coord_t w);
+void /* LV_ATTRIBUTE_FAST_MEM */ lv_dither_none(struct _lv_gradient_cache_t * grad, lv_coord_t x, lv_coord_t y,
+                                                lv_coord_t w);
 
-LV_ATTRIBUTE_FAST_MEM void lv_dither_ordered_hor(struct _lv_gradient_cache_t * grad, const lv_coord_t xs,
-                                                 const lv_coord_t y, const lv_coord_t w);
-LV_ATTRIBUTE_FAST_MEM void lv_dither_ordered_ver(struct _lv_gradient_cache_t * grad, const lv_coord_t xs,
-                                                 const lv_coord_t y, const lv_coord_t w);
+void /* LV_ATTRIBUTE_FAST_MEM */ lv_dither_ordered_hor(struct _lv_gradient_cache_t * grad, const lv_coord_t xs,
+                                                       const lv_coord_t y, const lv_coord_t w);
+void /* LV_ATTRIBUTE_FAST_MEM */ lv_dither_ordered_ver(struct _lv_gradient_cache_t * grad, const lv_coord_t xs,
+                                                       const lv_coord_t y, const lv_coord_t w);
 
 #if LV_DITHER_ERROR_DIFFUSION == 1
-LV_ATTRIBUTE_FAST_MEM void lv_dither_err_diff_hor(struct _lv_gradient_cache_t * grad, const lv_coord_t xs,
-                                                  const lv_coord_t y, const lv_coord_t w);
-LV_ATTRIBUTE_FAST_MEM void lv_dither_err_diff_ver(struct _lv_gradient_cache_t * grad, const lv_coord_t xs,
-                                                  const lv_coord_t y, const lv_coord_t w);
+void /* LV_ATTRIBUTE_FAST_MEM */ lv_dither_err_diff_hor(struct _lv_gradient_cache_t * grad, const lv_coord_t xs,
+                                                        const lv_coord_t y, const lv_coord_t w);
+void /* LV_ATTRIBUTE_FAST_MEM */ lv_dither_err_diff_ver(struct _lv_gradient_cache_t * grad, const lv_coord_t xs,
+                                                        const lv_coord_t y, const lv_coord_t w);
 #endif /* LV_DITHER_ERROR_DIFFUSION */
 
 #endif /* _DITHER_GRADIENT */
 #endif
-
 
 #ifdef __cplusplus
 } /*extern "C"*/

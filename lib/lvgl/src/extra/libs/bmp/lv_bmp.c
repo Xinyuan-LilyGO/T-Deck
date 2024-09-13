@@ -34,7 +34,6 @@ typedef struct {
 static lv_res_t decoder_info(lv_img_decoder_t * decoder, const void * src, lv_img_header_t * header);
 static lv_res_t decoder_open(lv_img_decoder_t * dec, lv_img_decoder_dsc_t * dsc);
 
-
 static lv_res_t decoder_read_line(lv_img_decoder_t * decoder, lv_img_decoder_dsc_t * dsc,
                                   lv_coord_t x, lv_coord_t y, lv_coord_t len, uint8_t * buf);
 
@@ -114,7 +113,6 @@ static lv_res_t decoder_info(lv_img_decoder_t * decoder, const void * src, lv_im
     return LV_RES_INV;         /*If didn't succeeded earlier then it's an error*/
 }
 
-
 /**
  * Open a PNG image and return the decided image
  * @param src can be file name or pointer to a C array
@@ -190,7 +188,6 @@ static lv_res_t decoder_open(lv_img_decoder_t * decoder, lv_img_decoder_dsc_t * 
     return LV_RES_INV;    /*If not returned earlier then it failed*/
 }
 
-
 static lv_res_t decoder_read_line(lv_img_decoder_t * decoder, lv_img_decoder_dsc_t * dsc,
                                   lv_coord_t x, lv_coord_t y, lv_coord_t len, uint8_t * buf)
 {
@@ -203,7 +200,14 @@ static lv_res_t decoder_read_line(lv_img_decoder_t * decoder, lv_img_decoder_dsc
     lv_fs_seek(&b->f, p, LV_FS_SEEK_SET);
     lv_fs_read(&b->f, buf, len * (b->bpp / 8), NULL);
 
-#if LV_COLOR_DEPTH == 32
+#if LV_COLOR_DEPTH == 16 && LV_COLOR_16_SWAP == 1
+    for(unsigned int i = 0; i < len * (b->bpp / 8); i += 2) {
+        buf[i] = buf[i] ^ buf[i + 1];
+        buf[i + 1] = buf[i] ^ buf[i + 1];
+        buf[i] = buf[i] ^ buf[i + 1];
+    }
+
+#elif LV_COLOR_DEPTH == 32
     if(b->bpp == 32) {
         lv_coord_t i;
         for(i = 0; i < len; i++) {
@@ -234,7 +238,6 @@ static lv_res_t decoder_read_line(lv_img_decoder_t * decoder, lv_img_decoder_dsc
 
     return LV_RES_OK;
 }
-
 
 /**
  * Free the allocated resources

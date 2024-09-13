@@ -42,7 +42,6 @@ typedef struct {
     uint16_t tick_major_width;
 
     int16_t label_gap;
-    int16_t label_color;
 
     int32_t min;
     int32_t max;
@@ -211,7 +210,6 @@ lv_meter_indicator_t * lv_meter_add_needle_img(lv_obj_t * obj, lv_meter_scale_t 
  */
 lv_meter_indicator_t * lv_meter_add_arc(lv_obj_t * obj, lv_meter_scale_t * scale, uint16_t width, lv_color_t color,
                                         int16_t r_mod);
-
 
 /**
  * Add a scale line indicator the scale. It will modify the ticks.

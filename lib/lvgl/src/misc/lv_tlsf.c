@@ -358,7 +358,6 @@ static const size_t block_size_min =
     sizeof(block_header_t) - sizeof(block_header_t *);
 static const size_t block_size_max = tlsf_cast(size_t, 1) << FL_INDEX_MAX;
 
-
 /* The TLSF control structure. */
 typedef struct control_t {
     /* Empty lists point at this block to indicate they are free. */
@@ -1157,18 +1156,22 @@ void * lv_tlsf_memalign(lv_tlsf_t tlsf, size_t align, size_t size)
     return block_prepare_used(control, block, adjust);
 }
 
-void lv_tlsf_free(lv_tlsf_t tlsf, const void * ptr)
+size_t lv_tlsf_free(lv_tlsf_t tlsf, const void * ptr)
 {
+    size_t size = 0;
     /* Don't attempt to free a NULL pointer. */
     if(ptr) {
         control_t * control = tlsf_cast(control_t *, tlsf);
         block_header_t * block = block_from_ptr(ptr);
         tlsf_assert(!block_is_free(block) && "block already marked as free");
+        size = block->size;
         block_mark_as_free(block);
         block = block_merge_prev(control, block);
         block = block_merge_next(control, block);
         block_insert(control, block);
     }
+
+    return size;
 }
 
 /*
@@ -1204,6 +1207,10 @@ void * lv_tlsf_realloc(lv_tlsf_t tlsf, void * ptr, size_t size)
         const size_t cursize = block_size(block);
         const size_t combined = cursize + block_size(next) + block_header_overhead;
         const size_t adjust = adjust_request_size(size, ALIGN_SIZE);
+        if(size > cursize && adjust == 0) {
+            /* The request is probably too large, fail */
+            return NULL;
+        }
 
         tlsf_assert(!block_is_free(block) && "block already marked as free");
 

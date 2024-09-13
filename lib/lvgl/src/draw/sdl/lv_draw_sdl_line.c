@@ -53,7 +53,7 @@ static SDL_Texture * line_texture_create(lv_draw_sdl_ctx_t * sdl_ctx, const lv_d
  *   GLOBAL FUNCTIONS
  **********************/
 void lv_draw_sdl_draw_line(lv_draw_ctx_t * draw_ctx, const lv_draw_line_dsc_t * dsc, const lv_point_t * point1,
-                           const lv_point_t * point2)
+                           const lv_point_t * point2, bool * in_cache)
 {
     lv_draw_sdl_ctx_t * sdl_ctx = (lv_draw_sdl_ctx_t *) draw_ctx;
     SDL_Renderer * renderer = sdl_ctx->renderer;
@@ -68,7 +68,7 @@ void lv_draw_sdl_draw_line(lv_draw_ctx_t * draw_ctx, const lv_draw_line_dsc_t * 
     SDL_Texture * texture = lv_draw_sdl_texture_cache_get(sdl_ctx, &key, sizeof(key), NULL);
     if(!texture) {
         texture = line_texture_create(sdl_ctx, dsc, (lv_coord_t) length);
-        lv_draw_sdl_texture_cache_put(sdl_ctx, &key, sizeof(key), texture);
+        *in_cache = lv_draw_sdl_texture_cache_put(sdl_ctx, &key, sizeof(key), texture);
     }
 
     lv_area_t coords = {x1, y1, x2, y2};
@@ -126,7 +126,10 @@ static SDL_Texture * line_texture_create(lv_draw_sdl_ctx_t * sdl_ctx, const lv_d
     SDL_SetRenderTarget(sdl_ctx->renderer, texture);
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(sdl_ctx->renderer, 0xFF, 0xFF, 0xFF, 0x0);
-    SDL_RenderClear(sdl_ctx->renderer);
+    /* SDL_RenderClear is not working properly, so we overwrite the target with solid color */
+    SDL_SetRenderDrawBlendMode(sdl_ctx->renderer, SDL_BLENDMODE_NONE);
+    SDL_RenderFillRect(sdl_ctx->renderer, NULL);
+    SDL_SetRenderDrawBlendMode(sdl_ctx->renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(sdl_ctx->renderer, 0xFF, 0xFF, 0xFF, 0xFF);
     SDL_Rect line_rect = {1 + dsc->width / 2, 1, length, dsc->width};
     SDL_RenderFillRect(sdl_ctx->renderer, &line_rect);

@@ -19,6 +19,7 @@
 #include "lv_draw_sdl_utils.h"
 #include "lv_draw_sdl_texture_cache.h"
 #include "lv_draw_sdl_composite.h"
+#include "lv_draw_sdl_layer.h"
 
 /*********************
  *      DEFINES
@@ -40,7 +41,6 @@ typedef struct {
 
 static lv_font_glyph_key_t font_key_glyph_create(const lv_font_t * font_p, uint32_t letter);
 
-
 /**********************
  *  STATIC VARIABLES
  **********************/
@@ -53,7 +53,7 @@ static lv_font_glyph_key_t font_key_glyph_create(const lv_font_t * font_p, uint3
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_sdl_draw_letter(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t * dsc,  const lv_point_t * pos_p,
+void lv_draw_sdl_draw_letter(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t * dsc, const lv_point_t * pos_p,
                              uint32_t letter)
 {
     const lv_area_t * clip_area = draw_ctx->clip_area;
@@ -116,6 +116,7 @@ void lv_draw_sdl_draw_letter(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t
     lv_font_glyph_key_t glyph_key = font_key_glyph_create(font_p, letter);
     bool glyph_found = false;
     SDL_Texture * texture = lv_draw_sdl_texture_cache_get(ctx, &glyph_key, sizeof(glyph_key), &glyph_found);
+    bool in_cache = false;
     if(!glyph_found) {
         if(g.resolved_font) {
             font_p = g.resolved_font;
@@ -127,18 +128,27 @@ void lv_draw_sdl_draw_letter(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t
         texture = SDL_CreateTextureFromSurface(renderer, mask);
         SDL_FreeSurface(mask);
         lv_mem_free(buf);
-        lv_draw_sdl_texture_cache_put(ctx, &glyph_key, sizeof(glyph_key), texture);
+        in_cache = lv_draw_sdl_texture_cache_put(ctx, &glyph_key, sizeof(glyph_key), texture);
+    }
+    else {
+        in_cache = true;
     }
     if(!texture) {
         return;
     }
 
     lv_area_t t_letter = letter_area, t_clip = *clip_area, apply_area;
-    bool has_mask = lv_draw_sdl_composite_begin(ctx, &letter_area, clip_area, NULL, dsc->blend_mode, &t_letter, &t_clip,
-                                                &apply_area);
+    bool has_composite = lv_draw_sdl_composite_begin(ctx, &letter_area, clip_area, NULL, dsc->blend_mode, &t_letter,
+                                                     &t_clip, &apply_area);
+
+    lv_draw_sdl_transform_areas_offset(ctx, has_composite, &apply_area, &t_letter, &t_clip);
 
     /*If the letter is completely out of mask don't draw it*/
     if(!_lv_area_intersect(&draw_area, &t_letter, &t_clip)) {
+        if(!in_cache) {
+            LV_LOG_WARN("Texture is not cached, this will impact performance.");
+            SDL_DestroyTexture(texture);
+        }
         return;
     }
     SDL_Rect srcrect, dstrect;
@@ -153,6 +163,11 @@ void lv_draw_sdl_draw_letter(lv_draw_ctx_t * draw_ctx, const lv_draw_label_dsc_t
     SDL_RenderCopy(renderer, texture, &srcrect, &dstrect);
 
     lv_draw_sdl_composite_end(ctx, &apply_area, dsc->blend_mode);
+
+    if(!in_cache) {
+        LV_LOG_WARN("Texture is not cached, this will impact performance.");
+        SDL_DestroyTexture(texture);
+    }
 }
 
 /**********************

@@ -25,8 +25,9 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
-LV_ATTRIBUTE_FAST_MEM static lv_res_t decode_and_draw(lv_draw_ctx_t * draw_ctx, const lv_draw_img_dsc_t * draw_dsc,
-                                                      const lv_area_t * coords, const void * src);
+static lv_res_t /* LV_ATTRIBUTE_FAST_MEM */ decode_and_draw(lv_draw_ctx_t * draw_ctx,
+                                                            const lv_draw_img_dsc_t * draw_dsc,
+                                                            const lv_area_t * coords, const void * src);
 
 static void show_error(lv_draw_ctx_t * draw_ctx, const lv_area_t * coords, const char * msg);
 static void draw_cleanup(_lv_img_cache_entry_t * cache);
@@ -69,18 +70,19 @@ void lv_draw_img(lv_draw_ctx_t * draw_ctx, const lv_draw_img_dsc_t * dsc, const 
 
     if(dsc->opa <= LV_OPA_MIN) return;
 
-    lv_res_t res;
+    lv_res_t res = LV_RES_INV;
+
     if(draw_ctx->draw_img) {
         res = draw_ctx->draw_img(draw_ctx, dsc, coords, src);
     }
-    else {
+
+    if(res != LV_RES_OK) {
         res = decode_and_draw(draw_ctx, dsc, coords, src);
     }
 
-    if(res == LV_RES_INV) {
+    if(res != LV_RES_OK) {
         LV_LOG_WARN("Image draw error");
         show_error(draw_ctx, coords, "No\ndata");
-        return;
     }
 }
 
@@ -197,11 +199,19 @@ lv_img_src_t lv_img_src_get_type(const void * src)
     if(src == NULL) return img_src_type;
     const uint8_t * u8_p = src;
 
-    /*The first byte shows the type of the image source*/
+    /*The first or fourth byte depending on platform endianess shows the type of the image source*/
+#if LV_BIG_ENDIAN_SYSTEM
+    if(u8_p[3] >= 0x20 && u8_p[3] <= 0x7F) {
+#else
     if(u8_p[0] >= 0x20 && u8_p[0] <= 0x7F) {
+#endif
         img_src_type = LV_IMG_SRC_FILE; /*If it's an ASCII character then it's file name*/
     }
+#if LV_BIG_ENDIAN_SYSTEM
+    else if(u8_p[3] >= 0x80) {
+#else
     else if(u8_p[0] >= 0x80) {
+#endif
         img_src_type = LV_IMG_SRC_SYMBOL; /*Symbols begins after 0x7F*/
     }
     else {
@@ -227,7 +237,8 @@ void lv_draw_img_decoded(lv_draw_ctx_t * draw_ctx, const lv_draw_img_dsc_t * dsc
  *   STATIC FUNCTIONS
  **********************/
 
-LV_ATTRIBUTE_FAST_MEM static lv_res_t decode_and_draw(lv_draw_ctx_t * draw_ctx, const lv_draw_img_dsc_t * draw_dsc,
+static lv_res_t LV_ATTRIBUTE_FAST_MEM decode_and_draw(lv_draw_ctx_t * draw_ctx,
+                                                      const lv_draw_img_dsc_t * draw_dsc,
                                                       const lv_area_t * coords, const void * src)
 {
     if(draw_dsc->opa <= LV_OPA_MIN) return LV_RES_OK;
@@ -236,11 +247,20 @@ LV_ATTRIBUTE_FAST_MEM static lv_res_t decode_and_draw(lv_draw_ctx_t * draw_ctx, 
 
     if(cdsc == NULL) return LV_RES_INV;
 
-
     lv_img_cf_t cf;
     if(lv_img_cf_is_chroma_keyed(cdsc->dec_dsc.header.cf)) cf = LV_IMG_CF_TRUE_COLOR_CHROMA_KEYED;
+    else if(LV_IMG_CF_ALPHA_8BIT == cdsc->dec_dsc.header.cf) cf = LV_IMG_CF_ALPHA_8BIT;
+    else if(LV_IMG_CF_RGB565A8 == cdsc->dec_dsc.header.cf) cf = LV_IMG_CF_RGB565A8;
     else if(lv_img_cf_has_alpha(cdsc->dec_dsc.header.cf)) cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
     else cf = LV_IMG_CF_TRUE_COLOR;
+
+    if(cf == LV_IMG_CF_ALPHA_8BIT) {
+        if(draw_dsc->angle || draw_dsc->zoom != LV_IMG_ZOOM_NONE) {
+            /* resume normal method */
+            cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+            cdsc->dec_dsc.img_data = NULL;
+        }
+    }
 
     if(cdsc->dec_dsc.error_msg != NULL) {
         LV_LOG_WARN("Image draw error");
@@ -330,7 +350,6 @@ LV_ATTRIBUTE_FAST_MEM static lv_res_t decode_and_draw(lv_draw_ctx_t * draw_ctx, 
     draw_cleanup(cdsc);
     return LV_RES_OK;
 }
-
 
 static void show_error(lv_draw_ctx_t * draw_ctx, const lv_area_t * coords, const char * msg)
 {

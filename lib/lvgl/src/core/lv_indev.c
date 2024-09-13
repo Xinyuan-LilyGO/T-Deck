@@ -303,16 +303,20 @@ lv_obj_t * lv_indev_search_obj(lv_obj_t * obj, lv_point_t * point)
     /*If this obj is hidden the children are hidden too so return immediately*/
     if(lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) return NULL;
 
-    bool hit_test_ok = lv_obj_hit_test(obj, point);
+    lv_point_t p_trans = *point;
+    lv_obj_transform_point(obj, &p_trans, false, true);
+
+    bool hit_test_ok = lv_obj_hit_test(obj, &p_trans);
 
     /*If the point is on this object or has overflow visible check its children too*/
-    if(_lv_area_is_point_on(&obj->coords, point, 0) || lv_obj_has_flag(obj, LV_OBJ_FLAG_OVERFLOW_VISIBLE)) {
+    if(_lv_area_is_point_on(&obj->coords, &p_trans, 0) || lv_obj_has_flag(obj, LV_OBJ_FLAG_OVERFLOW_VISIBLE)) {
         int32_t i;
         uint32_t child_cnt = lv_obj_get_child_cnt(obj);
+
         /*If a child matches use it*/
         for(i = child_cnt - 1; i >= 0; i--) {
             lv_obj_t * child = obj->spec_attr->children[i];
-            found_p = lv_indev_search_obj(child, point);
+            found_p = lv_indev_search_obj(child, &p_trans);
             if(found_p) return found_p;
         }
     }
@@ -351,16 +355,16 @@ static void indev_pointer_proc(lv_indev_t * i, lv_indev_data_t * data)
 
     /*Simple sanity check*/
     if(data->point.x < 0) {
-        LV_LOG_WARN("X is %d which is smaller than zero", data->point.x);
+        LV_LOG_WARN("X is %d which is smaller than zero", (int)data->point.x);
     }
     if(data->point.x >= lv_disp_get_hor_res(i->driver->disp)) {
-        LV_LOG_WARN("X is %d which is greater than hor. res", data->point.x);
+        LV_LOG_WARN("X is %d which is greater than hor. res", (int)data->point.x);
     }
     if(data->point.y < 0) {
-        LV_LOG_WARN("Y is %d which is smaller than zero", data->point.y);
+        LV_LOG_WARN("Y is %d which is smaller than zero", (int)data->point.y);
     }
     if(data->point.y >= lv_disp_get_ver_res(i->driver->disp)) {
-        LV_LOG_WARN("Y is %d which is greater than ver. res", data->point.y);
+        LV_LOG_WARN("Y is %d which is greater than ver. res", (int)data->point.y);
     }
 
     /*Move the cursor if set and moved*/
@@ -847,7 +851,7 @@ static void indev_proc_press(_lv_indev_proc_t * proc)
         if(indev_reset_check(proc)) return;
     }
 
-    /*If a new object was found reset some variables and send a pressed Call the ancestor's event handler*/
+    /*If a new object was found reset some variables and send a pressed event handler*/
     if(indev_obj_act != proc->types.pointer.act_obj) {
         proc->types.pointer.last_point.x = proc->types.pointer.act_point.x;
         proc->types.pointer.last_point.y = proc->types.pointer.act_point.y;
@@ -895,11 +899,8 @@ static void indev_proc_press(_lv_indev_proc_t * proc)
     proc->types.pointer.vect.x = proc->types.pointer.act_point.x - proc->types.pointer.last_point.x;
     proc->types.pointer.vect.y = proc->types.pointer.act_point.y - proc->types.pointer.last_point.y;
 
-    proc->types.pointer.scroll_throw_vect.x = (proc->types.pointer.scroll_throw_vect.x * 4) >> 3;
-    proc->types.pointer.scroll_throw_vect.y = (proc->types.pointer.scroll_throw_vect.y * 4) >> 3;
-
-    proc->types.pointer.scroll_throw_vect.x += (proc->types.pointer.vect.x * 4) >> 3;
-    proc->types.pointer.scroll_throw_vect.y += (proc->types.pointer.vect.y * 4) >> 3;
+    proc->types.pointer.scroll_throw_vect.x = (proc->types.pointer.scroll_throw_vect.x + proc->types.pointer.vect.x) / 2;
+    proc->types.pointer.scroll_throw_vect.y = (proc->types.pointer.scroll_throw_vect.y + proc->types.pointer.vect.y) / 2;
 
     proc->types.pointer.scroll_throw_vect_ori = proc->types.pointer.scroll_throw_vect;
 
@@ -948,6 +949,9 @@ static void indev_proc_press(_lv_indev_proc_t * proc)
 static void indev_proc_release(_lv_indev_proc_t * proc)
 {
     if(proc->wait_until_release != 0) {
+        lv_event_send(proc->types.pointer.act_obj, LV_EVENT_PRESS_LOST, indev_act);
+        if(indev_reset_check(proc)) return;
+
         proc->types.pointer.act_obj  = NULL;
         proc->types.pointer.last_obj = NULL;
         proc->pr_timestamp           = 0;
@@ -979,6 +983,26 @@ static void indev_proc_release(_lv_indev_proc_t * proc)
         proc->types.pointer.act_obj = NULL;
         proc->pr_timestamp          = 0;
         proc->longpr_rep_timestamp  = 0;
+
+        /*Get the transformed vector with this object*/
+        if(scroll_obj) {
+            int16_t angle = 0;
+            int16_t zoom = 256;
+            lv_point_t pivot = { 0, 0 };
+            lv_obj_t * parent = scroll_obj;
+            while(parent) {
+                angle += lv_obj_get_style_transform_angle(parent, 0);
+                zoom *= (lv_obj_get_style_transform_zoom(parent, 0) / 256);
+                parent = lv_obj_get_parent(parent);
+            }
+
+            if(angle != 0 || zoom != LV_IMG_ZOOM_NONE) {
+                angle = -angle;
+                zoom = (256 * 256) / zoom;
+                lv_point_transform(&proc->types.pointer.scroll_throw_vect, angle, zoom, &pivot);
+                lv_point_transform(&proc->types.pointer.scroll_throw_vect_ori, angle, zoom, &pivot);
+            }
+        }
 
     }
 

@@ -46,12 +46,21 @@ enum {
 
 typedef uint8_t  lv_table_cell_ctrl_t;
 
+/*Data of cell*/
+typedef struct {
+    lv_table_cell_ctrl_t ctrl;
+#if LV_USE_USER_DATA
+    void * user_data; /**< Custom user data*/
+#endif
+    char txt[];
+} lv_table_cell_t;
+
 /*Data of table*/
 typedef struct {
     lv_obj_t obj;
     uint16_t col_cnt;
     uint16_t row_cnt;
-    char ** cell_data;
+    lv_table_cell_t ** cell_data;
     lv_coord_t * row_h;
     lv_coord_t * col_w;
     uint16_t col_act;
@@ -134,7 +143,6 @@ void lv_table_set_col_width(lv_obj_t * obj, uint16_t col_id, lv_coord_t w);
  */
 void lv_table_add_cell_ctrl(lv_obj_t * obj, uint16_t row, uint16_t col, lv_table_cell_ctrl_t ctrl);
 
-
 /**
  * Clear control bits of the cell.
  * @param obj       pointer to a Table object
@@ -143,6 +151,17 @@ void lv_table_add_cell_ctrl(lv_obj_t * obj, uint16_t row, uint16_t col, lv_table
  * @param ctrl      OR-ed values from ::lv_table_cell_ctrl_t
  */
 void lv_table_clear_cell_ctrl(lv_obj_t * obj, uint16_t row, uint16_t col, lv_table_cell_ctrl_t ctrl);
+
+#if LV_USE_USER_DATA
+/**
+ * Add custom user data to the cell.
+ * @param obj       pointer to a Table object
+ * @param row       id of the row [0 .. row_cnt -1]
+ * @param col       id of the column [0 .. col_cnt -1]
+ * @param user_data pointer to the new user_data. It must be allocated by user as it will be freed automatically
+ */
+void lv_table_set_cell_user_data(lv_obj_t * obj, uint16_t row, uint16_t col, void * user_data);
+#endif
 
 /*=====================
  * Getter functions
@@ -196,6 +215,16 @@ bool lv_table_has_cell_ctrl(lv_obj_t * obj, uint16_t row, uint16_t col, lv_table
  * @param col       pointer to variable to store the selected column  (LV_TABLE_CELL_NONE: if no cell selected)
  */
 void lv_table_get_selected_cell(lv_obj_t * obj, uint16_t * row, uint16_t * col);
+
+#if LV_USE_USER_DATA
+/**
+ * Get custom user data to the cell.
+ * @param obj       pointer to a Table object
+ * @param row       id of the row [0 .. row_cnt -1]
+ * @param col       id of the column [0 .. col_cnt -1]
+ */
+void * lv_table_get_cell_user_data(lv_obj_t * obj, uint16_t row, uint16_t col);
+#endif
 
 /**********************
  *      MACROS

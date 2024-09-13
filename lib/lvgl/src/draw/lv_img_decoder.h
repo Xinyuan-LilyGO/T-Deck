@@ -82,7 +82,6 @@ typedef lv_res_t (*lv_img_decoder_read_line_f_t)(struct _lv_img_decoder_t * deco
  */
 typedef void (*lv_img_decoder_close_f_t)(struct _lv_img_decoder_t * decoder, struct _lv_img_decoder_dsc_t * dsc);
 
-
 typedef struct _lv_img_decoder_t {
     lv_img_decoder_info_f_t info_cb;
     lv_img_decoder_open_f_t open_cb;
@@ -93,7 +92,6 @@ typedef struct _lv_img_decoder_t {
     void * user_data;
 #endif
 } lv_img_decoder_t;
-
 
 /**Describe an image decoding session. Stores data about the decoding*/
 typedef struct _lv_img_decoder_dsc_t {
@@ -144,7 +142,7 @@ void _lv_img_decoder_init(void);
  * Get information about an image.
  * Try the created image decoder one by one. Once one is able to get info that info will be used.
  * @param src the image source. Can be
- *  1) File name: E.g. "S:folder/img1.png" (The drivers needs to registered via `lv_fs_add_drv()`)
+ *  1) File name: E.g. "S:folder/img1.png" (The drivers needs to registered via `lv_fs_drv_register()`)
  *  2) Variable: Pointer to an `lv_img_dsc_t` variable
  *  3) Symbol: E.g. `LV_SYMBOL_OK`
  * @param header the image info will be stored here
@@ -157,7 +155,7 @@ lv_res_t lv_img_decoder_get_info(const void * src, lv_img_header_t * header);
  * Try the created image decoders one by one. Once one is able to open the image that decoder is saved in `dsc`
  * @param dsc describes a decoding session. Simply a pointer to an `lv_img_decoder_dsc_t` variable.
  * @param src the image source. Can be
- *  1) File name: E.g. "S:folder/img1.png" (The drivers needs to registered via `lv_fs_add_drv()`)
+ *  1) File name: E.g. "S:folder/img1.png" (The drivers needs to registered via `lv_fs_drv_register())`)
  *  2) Variable: Pointer to an `lv_img_dsc_t` variable
  *  3) Symbol: E.g. `LV_SYMBOL_OK`
  * @param color The color of the image with `LV_IMG_CF_ALPHA_...`

@@ -1,54 +1,14 @@
 #include <TFT_eSPI.h>
 #include <lvgl.h>
 #include <Arduino.h>
-#define TOUCH_MODULES_GT911
-#include "TouchLib.h"
+#include "TouchDrvGT911.hpp"
 #include "utilities.h"
 
 static void slider_event_cb(lv_event_t *e);
 static lv_obj_t *slider_label;
 
 TFT_eSPI        tft;
-TouchLib    *touch = NULL;
-uint8_t     touchAddress = GT911_SLAVE_ADDRESS2;
-
-void scanDevices(TwoWire *w)
-{
-    uint8_t err, addr;
-    int nDevices = 0;
-    uint32_t start = 0;
-    for (addr = 1; addr < 127; addr++) {
-        start = millis();
-        w->beginTransmission(addr); delay(2);
-        err = w->endTransmission();
-        if (err == 0) {
-            nDevices++;
-            Serial.print("I2C device found at address 0x");
-            if (addr < 16) {
-                Serial.print("0");
-            }
-            Serial.print(addr, HEX);
-            Serial.println(" !");
-
-            if (addr == GT911_SLAVE_ADDRESS2) {
-                touchAddress = GT911_SLAVE_ADDRESS2;
-                Serial.println("Find GT911 Drv Slave address: 0x14");
-            } else if (addr == GT911_SLAVE_ADDRESS1) {
-                touchAddress = GT911_SLAVE_ADDRESS1;
-                Serial.println("Find GT911 Drv Slave address: 0x5D");
-            }
-        } else if (err == 4) {
-            Serial.print("Unknow error at address 0x");
-            if (addr < 16) {
-                Serial.print("0");
-            }
-            Serial.println(addr, HEX);
-        }
-    }
-    if (nDevices == 0)
-        Serial.println("No I2C devices found\n");
-}
-
+TouchDrvGT911 touch;
 
 // LilyGo  T-Deck  control backlight chip has 16 levels of adjustment range
 // The adjustable range is 0~15, 0 is the minimum brightness, 15 is the maximum brightness
@@ -92,41 +52,41 @@ static void disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *
     lv_disp_flush_ready( disp );
 }
 
+int16_t x[5], y[5];
 
-static bool getTouch(int16_t &x, int16_t &y)
-{
-    if (! digitalRead(BOARD_TOUCH_INT))return false;
-    uint8_t rotation = tft.getRotation();
-    if (!touch->read()) {
-        return false;
-    }
-    TP_Point t = touch->getPoint(0);
-    switch (rotation) {
-    case 1:
-        x = t.y;
-        y = tft.height() - t.x;
-        break;
-    case 2:
-        x = tft.width() - t.x;
-        y = tft.height() - t.y;
-        break;
-    case 3:
-        x = tft.width() - t.y;
-        y = t.x;
-        break;
-    case 0:
-    default:
-        x = t.x;
-        y = t.y;
-    }
-    Serial.printf("R:%d X:%d Y:%d\n", rotation, x, y);
-    return true;
-}
+
 
 /*Read the touchpad*/
 static void touchpad_read( lv_indev_drv_t *indev_driver, lv_indev_data_t *data )
 {
-    data->state = getTouch(data->point.x, data->point.y) ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+    data->state =  LV_INDEV_STATE_REL;
+
+    // data->state = getTouch(data->point.x, data->point.y) ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+    if (touch.isPressed()) {
+        Serial.println("Pressed!");
+        uint8_t touched = touch.getPoint(x, y, touch.getSupportTouchPoint());
+        if (touched > 0) {
+            data->state = LV_INDEV_STATE_PR;
+            data->point.x = x[0];
+            data->point.y = y[0];
+
+            Serial.print(millis());
+            Serial.print("ms ");
+            for (int i = 0; i < touched; ++i) {
+                Serial.print("X[");
+                Serial.print(i);
+                Serial.print("]:");
+                Serial.print(x[i]);
+                Serial.print(" ");
+                Serial.print(" Y[");
+                Serial.print(i);
+                Serial.print("]:");
+                Serial.print(y[i]);
+                Serial.print(" ");
+            }
+            Serial.println();
+        }
+    }
 }
 
 
@@ -217,10 +177,6 @@ void setup()
     pinMode(BOARD_TBOX_G04, INPUT_PULLUP);
     pinMode(BOARD_TBOX_G03, INPUT_PULLUP);
 
-    //Wakeup touch chip
-    pinMode(BOARD_TOUCH_INT, OUTPUT);
-    digitalWrite(BOARD_TOUCH_INT, HIGH);
-
     Serial.print("Init display id:");
     Serial.println(USER_SETUP_ID);
 
@@ -235,16 +191,29 @@ void setup()
     Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
 
-    // Two touch screens, the difference between them is the device address,
-    // use ScanDevices to get the existing I2C address
-    scanDevices(&Wire);
+    touch.setPins(-1, BOARD_TOUCH_INT);
+    if (!touch.begin(Wire, GT911_SLAVE_ADDRESS_L)) {
+        while (1) {
+            Serial.println("Failed to find GT911 - check your wiring!");
+            delay(1000);
+        }
+    }
 
-    touch = new TouchLib(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, touchAddress);
+    Serial.println("Init GT911 Sensor success!");
 
-    touch->init();
+    // Set touch max xy
+    touch.setMaxCoordinates(320, 240);
+
+    // Set swap xy
+    touch.setSwapXY(true);
+
+    // Set mirror xy
+    touch.setMirrorXY(false, true);
+
 
     setupLvgl();
 
+#if 0
     lv_obj_t *tv = lv_tileview_create(lv_scr_act());
 
     /*Tile1: just a label*/
@@ -302,7 +271,51 @@ void setup()
     lv_anim_set_repeat_delay(&a, 500);
     lv_anim_set_values(&a, 0, 100);
     lv_anim_start(&a);
+#else
 
+    const int offset = 0;
+
+    struct align_str {
+        int16_t x;
+        int16_t y;
+        lv_align_t align;
+
+    } tmp[] = {
+
+        {0, 0, LV_ALIGN_TOP_LEFT},
+        {0, 0, LV_ALIGN_TOP_MID},
+        {0, 0, LV_ALIGN_TOP_RIGHT},
+
+        {0, offset, LV_ALIGN_TOP_LEFT},
+        {0, offset, LV_ALIGN_TOP_MID},
+        {0, offset, LV_ALIGN_TOP_RIGHT},
+
+        {0, 0, LV_ALIGN_LEFT_MID},
+        {0, 0, LV_ALIGN_CENTER},
+        {0, 0, LV_ALIGN_RIGHT_MID},
+
+        {0, offset, LV_ALIGN_LEFT_MID},
+        {0, offset, LV_ALIGN_CENTER},
+        {0, offset, LV_ALIGN_RIGHT_MID},
+
+        {0, 0, LV_ALIGN_BOTTOM_LEFT},
+        {0, 0, LV_ALIGN_BOTTOM_MID},
+        {0, 0, LV_ALIGN_BOTTOM_RIGHT},
+    };
+
+    // Test touch boundaries
+    for (int i = 0; i < sizeof(tmp) / sizeof(tmp[0]); ++i) {
+        lv_obj_t *btn1 = lv_btn_create(lv_scr_act());
+        lv_obj_set_width(btn1, 60);
+        lv_obj_add_flag(btn1, LV_OBJ_FLAG_CHECKABLE);
+        // lv_obj_add_event_cb(btn1, border_touch_event_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_align(btn1, tmp[i].align, tmp[i].x, tmp[i].y);
+        lv_obj_t *label = lv_label_create(btn1);
+        // lv_obj_set_style_text_font(label, &lv_font_montserrat_20, LV_PART_MAIN);
+        lv_label_set_text_fmt(label, "%d", i);
+        lv_obj_center(label);
+    }
+#endif
     // Adjust backlight
     pinMode(BOARD_BL_PIN, OUTPUT);
     setBrightness(16);

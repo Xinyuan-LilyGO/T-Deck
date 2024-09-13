@@ -8,50 +8,10 @@
  */
 
 #include <Arduino.h>
-
-#define TOUCH_MODULES_GT911
-#include "TouchLib.h"
 #include "utilities.h"
+#include "TouchDrvGT911.hpp"
 
-TouchLib    *touch = NULL;
-uint8_t     touchAddress = GT911_SLAVE_ADDRESS2;
-
-void scanDevices(TwoWire *w)
-{
-    uint8_t err, addr;
-    int nDevices = 0;
-    uint32_t start = 0;
-    for (addr = 1; addr < 127; addr++) {
-        start = millis();
-        w->beginTransmission(addr); delay(2);
-        err = w->endTransmission();
-        if (err == 0) {
-            nDevices++;
-            Serial.print("I2C device found at address 0x");
-            if (addr < 16) {
-                Serial.print("0");
-            }
-            Serial.print(addr, HEX);
-            Serial.println(" !");
-
-            if (addr == GT911_SLAVE_ADDRESS2) {
-                touchAddress = GT911_SLAVE_ADDRESS2;
-                Serial.println("Find GT911 Drv Slave address: 0x14");
-            } else if (addr == GT911_SLAVE_ADDRESS1) {
-                touchAddress = GT911_SLAVE_ADDRESS1;
-                Serial.println("Find GT911 Drv Slave address: 0x5D");
-            }
-        } else if (err == 4) {
-            Serial.print("Unknow error at address 0x");
-            if (addr < 16) {
-                Serial.print("0");
-            }
-            Serial.println(addr, HEX);
-        }
-    }
-    if (nDevices == 0)
-        Serial.println("No I2C devices found\n");
-}
+TouchDrvGT911 touch;
 
 void setup()
 {
@@ -64,27 +24,55 @@ void setup()
 
     Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
 
-    // Two touch screens, the difference between them is the device address,
-    // use ScanDevices to get the existing I2C address
-    scanDevices(&Wire);
 
-    touch = new TouchLib(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, touchAddress);
+    touch.setPins(-1, BOARD_TOUCH_INT);
+    if (!touch.begin(Wire, GT911_SLAVE_ADDRESS_L)) {
+        while (1) {
+            Serial.println("Failed to find GT911 - check your wiring!");
+            delay(1000);
+        }
+    }
 
-    touch->init();
+    Serial.println("Init GT911 Sensor success!");
+
+    // Set touch max xy
+    touch.setMaxCoordinates(320, 240);
+
+    // Set swap xy
+    touch.setSwapXY(true);
+
+    // Set mirror xy
+    touch.setMirrorXY(false, true);
 
 }
 
+
+int16_t x[5], y[5];
+
 void loop()
 {
-    // You can judge the level of the touch interrupt to get whether there is a touch
-    if (digitalRead(BOARD_TOUCH_INT)) {
-        bool res =  touch->read();
-        if (res) {
-            TP_Point  p = touch->getPoint(0);
-            Serial.printf("X:%d Y:%d\n", p.x, p.y);
+    if (touch.isPressed()) {
+        Serial.println("Pressed!");
+        uint8_t touched = touch.getPoint(x, y, touch.getSupportTouchPoint());
+        if (touched > 0) {
+            Serial.print(millis());
+            Serial.print("ms ");
+            for (int i = 0; i < touched; ++i) {
+                Serial.print("X[");
+                Serial.print(i);
+                Serial.print("]:");
+                Serial.print(x[i]);
+                Serial.print(" ");
+                Serial.print(" Y[");
+                Serial.print(i);
+                Serial.print("]:");
+                Serial.print(y[i]);
+                Serial.print(" ");
+            }
+            Serial.println();
         }
     }
-    delay(5);
+    delay(100);
 }
 
 

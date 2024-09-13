@@ -26,13 +26,42 @@
 #include <Audio.h>
 #include <driver/i2s.h>
 #include <WiFi.h>
+#include "TouchDrvGT911.hpp"
+#include <esp_sntp.h>
 
 // By default, the audio pass-through speaker is used for testing, and esp_sr can also be used for noise detection.
 #define USE_ESP_VAD
 
-#define TOUCH_MODULES_GT911
-#include "TouchLib.h"
 #include "utilities.h"
+
+
+#ifndef BOARD_HAS_PSRAM
+#error "Detected that PSRAM is not turned on. Please set PSRAM to OPI PSRAM in ArduinoIDE"
+#endif
+
+
+#ifndef SerialGPS
+#define SerialGPS Serial1
+#endif
+
+#include <TinyGPS++.h>
+TinyGPSPlus gps;
+
+
+#define MIC_I2S_SAMPLE_RATE         16000
+#define MIC_I2S_PORT                I2S_NUM_1
+#define SPK_I2S_PORT                I2S_NUM_0
+#define VAD_SAMPLE_RATE_HZ          16000
+#define VAD_FRAME_LENGTH_MS         30
+#define VAD_BUFFER_LENGTH           (VAD_FRAME_LENGTH_MS * VAD_SAMPLE_RATE_HZ / 1000)
+
+LV_IMG_DECLARE(image_output);
+LV_IMG_DECLARE(image);
+LV_IMG_DECLARE(image1);
+LV_IMG_DECLARE(image2);
+LV_IMG_DECLARE(image3);
+LV_IMG_DECLARE(image4);
+
 
 #if TFT_DC !=  BOARD_TFT_DC || TFT_CS !=  BOARD_TFT_CS || TFT_MOSI !=  BOARD_SPI_MOSI || TFT_SCLK !=  BOARD_SPI_SCK
 #error "Not using the already configured T-Deck file, please remove <Arduino/libraries/TFT_eSPI> and replace with <lib/TFT_eSPI>, please do not click the upgrade library button when opening sketches in ArduinoIDE versions 2.0 and above, otherwise the original configuration file will be replaced !!!"
@@ -40,20 +69,8 @@
 #error "Not using the already configured T-Deck file, please remove <Arduino/libraries/TFT_eSPI> and replace with <lib/TFT_eSPI>, please do not click the upgrade library button when opening sketches in ArduinoIDE versions 2.0 and above, otherwise the original configuration file will be replaced !!!"
 #endif
 
-#ifndef BOARD_HAS_PSRAM
-#error "Detected that PSRAM is not turned on. Please set PSRAM to OPI PSRAM in ArduinoIDE"
-#endif
+#define LVGL_BUFFER_SIZE            (TFT_WIDTH * TFT_HEIGHT * sizeof(lv_color_t))
 
-#ifndef RADIO_FREQ
-#define RADIO_FREQ                  868.0
-#endif
-
-
-// L76K GPS USE 9600 BAUDRATE
-#define GPS_BAUD        9600
-
-// M10Q GPS USE 38400 BAUDRATE
-// #define GPS_BAUD        38400
 
 typedef struct {
     uint8_t cmd;
@@ -82,55 +99,20 @@ lcd_cmd_t lcd_st7789v[] = {
     {0x29, {0}, 0},
     {0x2C, {0}, 0},
 };
-#ifndef SerialGPS
-#define SerialGPS Serial1
-#endif
 
-#define BOARD_GPS_TX_PIN                 43
-#define BOARD_GPS_RX_PIN                 44
-#include <TinyGPS++.h>
-TinyGPSPlus gps;
+TFT_eSPI        tft;
+SemaphoreHandle_t xSemaphore = NULL;
+TouchDrvGT911 touch;
+
+lv_indev_t  *kb_indev = NULL;
+lv_indev_t  *mouse_indev = NULL;
+lv_indev_t  *touch_indev = NULL;
+lv_group_t  *kb_indev_group;
 
 
-#define DEFAULT_COLOR               (lv_color_make(252, 218, 72))
-#define MIC_I2S_SAMPLE_RATE         16000
-#define MIC_I2S_PORT                I2S_NUM_1
-#define SPK_I2S_PORT                I2S_NUM_0
-#define VAD_SAMPLE_RATE_HZ          16000
-#define VAD_FRAME_LENGTH_MS         30
-#define VAD_BUFFER_LENGTH           (VAD_FRAME_LENGTH_MS * VAD_SAMPLE_RATE_HZ / 1000)
-#define LVGL_BUFFER_SIZE            (TFT_WIDTH * TFT_HEIGHT * sizeof(lv_color_t))
-
-LV_IMG_DECLARE(image_output);
-
-LV_IMG_DECLARE(image);
-LV_IMG_DECLARE(image1);
-LV_IMG_DECLARE(image2);
-LV_IMG_DECLARE(image3);
-LV_IMG_DECLARE(image4);
 LV_IMG_DECLARE(image_emoji);
 
 
-enum DemoEvent {
-    DEMO_TX_BTN_CLICK_EVENT,
-    DEMO_RX_BTN_CLICK_EVENT,
-    DEMO_CLEAN_BTN_CLICK_EVENT,
-    DEMO_VAD_BTN_CLICK_EVENT,
-    DEMO_PLAY_BTN_CLICK_EVENT,
-    DEMO_SLEEP_BTN_CLICK_EVENT,
-    DEMO_GPS_BTN_CLICK_EVENT
-};
-
-
-static const DemoEvent event[] = {
-    DEMO_TX_BTN_CLICK_EVENT,
-    DEMO_RX_BTN_CLICK_EVENT,
-    DEMO_CLEAN_BTN_CLICK_EVENT,
-    DEMO_VAD_BTN_CLICK_EVENT,
-    DEMO_PLAY_BTN_CLICK_EVENT,
-    DEMO_SLEEP_BTN_CLICK_EVENT,
-    DEMO_GPS_BTN_CLICK_EVENT,
-};
 
 #ifdef USE_ESP_VAD
 #include <esp_vad.h>
@@ -141,9 +123,7 @@ const size_t    vad_buffer_size = VAD_BUFFER_LENGTH * sizeof(short);
 uint16_t loopbackBuffer[3200] = {0};
 #endif
 
-TouchLib *touch = NULL;
 SX1262 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUSY_PIN);
-TFT_eSPI        tft;
 Audio           audio;
 size_t          bytes_read;
 uint8_t         status;
@@ -153,36 +133,52 @@ TaskHandle_t    radioHandle = NULL;
 static lv_obj_t *vad_btn_label;
 static uint32_t vad_detected_counter = 0;
 static TaskHandle_t vadTaskHandler;
+bool        kbDetected = false;
+bool        touchDetected = false;
 bool        transmissionFlag = true;
 bool        enableInterrupt = true;
 int         transmissionState ;
 bool        hasRadio = false;
-bool        touchDected = false;
-bool        kbDected = false;
 bool        sender = true;
 bool        enterSleep = false;
-bool        runGPS = false;
 uint32_t    sendCount = 0;
-uint32_t    runningMillis = 0;
-uint8_t     touchAddress = GT911_SLAVE_ADDRESS2;
+uint32_t    configTxInterval = 1000;
+uint32_t    last_update_millis = 0;
 
-lv_indev_t  *kb_indev = NULL;
-lv_indev_t  *mouse_indev = NULL;
-lv_indev_t  *touch_indev = NULL;
-lv_group_t  *kb_indev_group;
-lv_obj_t    *radio_ta;
-lv_obj_t *main_count;
-SemaphoreHandle_t xSemaphore = NULL;
 
-void setupLvgl();
+lv_obj_t    *main_count;
 
-#include <esp_sntp.h>
 
+#ifndef WIFI_SSID
 #define WIFI_SSID             "You WIFI SSID"
-#define WIFI_PASS             "You WIFI PASSWORD"
+#endif
+
+#ifndef WIFI_PASSWORD
+#define WIFI_PASSWORD             "You WIFI PASSWORD"
+#endif
+
 #define NTP_SERVER1           "pool.ntp.org"
 #define NTP_SERVER2           "time.nist.gov"
 #define DEFAULT_TIMEZONE      "CST-8"         //When the time zone cannot be obtained, the default time zone is used
+
+
+static void setupLvgl();
+static void keypad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
+static uint32_t keypad_get_key(void);
+static void touchpad_read( lv_indev_drv_t *indev_driver, lv_indev_data_t *data );
+static void mouse_read(lv_indev_drv_t *indev, lv_indev_data_t *data);
+static void disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p );
+static bool GPS_Recovery();
+
+
+
+extern void updateGPS(double lat, double lng,
+                      uint16_t year, uint8_t month, uint8_t day,
+                      uint8_t hour, uint8_t minute, uint8_t second,
+                      double speed, uint32_t rx_char );
+extern void updateNoiseLabel(uint32_t cnt);
+extern void setLoRaMessage(const char *text);
+extern void setupUI(void);
 
 
 bool setupGPS()
@@ -265,6 +261,7 @@ static void wifi_event_cb(WiFiEvent_t event)
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
         Serial.println("Disconnected from WiFi access point");
+        lv_msg_send(_BV(1), NULL);
         break;
     case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
         Serial.println("Authentication mode of access point has changed");
@@ -272,9 +269,11 @@ static void wifi_event_cb(WiFiEvent_t event)
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         Serial.print("Obtained IP address: ");
         Serial.println(WiFi.localIP());
+        lv_msg_send(_BV(1), NULL);
         break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
         Serial.println("Lost IP address and IP address is reset to 0");
+        lv_msg_send(_BV(1), NULL);
         break;
     default: break;
     }
@@ -284,7 +283,7 @@ static void wifi_event_cb(WiFiEvent_t event)
 void setupWiFi()
 {
     WiFi.onEvent(wifi_event_cb);
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     configTzTime(DEFAULT_TIMEZONE, NTP_SERVER1, NTP_SERVER2);
     // set notification call-back function
@@ -329,43 +328,6 @@ void setFlag(void)
     transmissionFlag = true;
 }
 
-void scanDevices(TwoWire *w)
-{
-    uint8_t err, addr;
-    int nDevices = 0;
-    uint32_t start = 0;
-    for (addr = 1; addr < 127; addr++) {
-        start = millis();
-        w->beginTransmission(addr); delay(2);
-        err = w->endTransmission();
-        if (err == 0) {
-            nDevices++;
-            Serial.print("I2C device found at address 0x");
-            if (addr < 16) {
-                Serial.print("0");
-            }
-            Serial.print(addr, HEX);
-            Serial.println(" !");
-
-            if (addr == GT911_SLAVE_ADDRESS2) {
-                touchAddress = GT911_SLAVE_ADDRESS2;
-                Serial.println("Find GT911 Drv Slave address: 0x14");
-            } else if (addr == GT911_SLAVE_ADDRESS1) {
-                touchAddress = GT911_SLAVE_ADDRESS1;
-                Serial.println("Find GT911 Drv Slave address: 0x5D");
-            }
-        } else if (err == 4) {
-            Serial.print("Unknow error at address 0x");
-            if (addr < 16) {
-                Serial.print("0");
-            }
-            Serial.println(addr, HEX);
-        }
-    }
-    if (nDevices == 0)
-        Serial.println("No I2C devices found\n");
-}
-
 bool setupRadio()
 {
     digitalWrite(BOARD_SDCARD_CS, HIGH);
@@ -392,19 +354,19 @@ bool setupRadio()
     }
 
     // set bandwidth to 125 kHz
-    if (radio.setBandwidth(125.0) == RADIOLIB_ERR_INVALID_BANDWIDTH) {
+    if (radio.setBandwidth(RADIO_BANDWIDTH) == RADIOLIB_ERR_INVALID_BANDWIDTH) {
         Serial.println(F("Selected bandwidth is invalid for this module!"));
         return false;
     }
 
     // set spreading factor to 10
-    if (radio.setSpreadingFactor(10) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR) {
+    if (radio.setSpreadingFactor(RADIO_SF) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR) {
         Serial.println(F("Selected spreading factor is invalid for this module!"));
         return false;
     }
 
     // set coding rate to 6
-    if (radio.setCodingRate(6) == RADIOLIB_ERR_INVALID_CODING_RATE) {
+    if (radio.setCodingRate(RADIO_CR) == RADIOLIB_ERR_INVALID_CODING_RATE) {
         Serial.println(F("Selected coding rate is invalid for this module!"));
         return false;
     }
@@ -416,7 +378,7 @@ bool setupRadio()
     }
 
     // set output power to 10 dBm (accepted range is -17 - 22 dBm)
-    if (radio.setOutputPower(22) == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
+    if (radio.setOutputPower(RADIO_TX_POWER) == RADIOLIB_ERR_INVALID_OUTPUT_POWER) {
         Serial.println(F("Selected output power is invalid for this module!"));
         return false;
     }
@@ -513,7 +475,7 @@ bool setupCoder()
 
 }
 
-void taskplaySong(void *p)
+void taskPlaySong(void *p)
 {
     while (1) {
         if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
@@ -526,59 +488,46 @@ void taskplaySong(void *p)
 
 void loopGPS()
 {
-    char buf[256] = {0};
+    static  uint32_t gps_update_interval = 0;
 
-    if (!runGPS) {
-        return;
-    }
-    while (SerialGPS.available()) {
-        int c = SerialGPS.read();
-        Serial.write(c);
-        gps.encode(c);
-    }
+    unsigned long start = millis();
+    do {
+        while (SerialGPS.available()) {
+            int c = SerialGPS.read();
+            // Serial.write(c);
+            gps.encode(c);
+        }
+    } while (millis() - start < 20);
 
-    if (runningMillis < millis()) {
-        // if (gps.location.isValid() && gps.date.isValid() && gps.time.isValid()) {
-        snprintf(buf, 256, "lat:%.6f \nlng:%.6f\nDATE:%d/%d/%d\nTIME:%d:%d:%d\nProcessChar:%u\n",
-                 gps.location.lat(),
-                 gps.location.lng(),
-                 gps.date.year(),
-                 gps.date.month(),
-                 gps.date.day(),
-                 gps.time.hour(),
-                 gps.time.minute(),
-                 gps.time.second(),
-                 gps.charsProcessed()
-                );
-        lv_textarea_set_text(radio_ta, buf);
-        // }
-        runningMillis = millis()  + 3000;
+    if (gps_update_interval < millis()) {
+        updateGPS(gps.location.lat(),
+                  gps.location.lng(),
+                  gps.date.year(),
+                  gps.date.month(),
+                  gps.date.day(),
+                  gps.time.hour(),
+                  gps.time.minute(),
+                  gps.time.second(),
+                  gps.speed.value(),
+                  gps.charsProcessed());
+        gps_update_interval = millis()  + 3000;
     }
 }
 
 void loopRadio()
 {
+    char buf[256];
+    static uint32_t senderInterval = 0;
     if (!hasRadio) {
-        // lv_textarea_set_text(radio_ta, "Radio not online !");
         return ;
-    }
-    if (runGPS) {
-        return;
     }
     if ( xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE ) {
         digitalWrite(BOARD_SDCARD_CS, HIGH);
         digitalWrite(RADIO_CS_PIN, HIGH);
         digitalWrite(BOARD_TFT_CS, HIGH);
 
-        char buf[256];
-
-        if (strlen(lv_textarea_get_text(radio_ta)) >= lv_textarea_get_max_length(radio_ta)) {
-            lv_textarea_set_text(radio_ta, "");
-        }
-
         if (sender) {
-            // Send data every 200 ms
-            if (millis() - runningMillis > 1000) {
+            if ((millis() - senderInterval) > configTxInterval) {
                 // check if the previous transmission finished
                 if (transmissionFlag) {
                     // disable the interrupt service routine while
@@ -589,7 +538,7 @@ void loopRadio()
 
                     if (transmissionState == RADIOLIB_ERR_NONE) {
                         // packet was successfully sent
-                        Serial.println(F("transmission finished!"));
+                        // Serial.println(F("transmission finished!"));
                         // NOTE: when using interrupt-driven transmit method,
                         //       it is not possible to automatically measure
                         //       transmission data rate using getDataRate()
@@ -598,11 +547,12 @@ void loopRadio()
                         Serial.println(transmissionState);
                     }
 
-                    snprintf(buf, 256, "[ %u ]TX %u finished\n", millis() / 1000, sendCount);
-                    lv_textarea_set_text(radio_ta, buf);
-                    lv_obj_add_state(radio_ta, LV_STATE_FOCUSED);
+                    snprintf(buf, 256, "TX %u %s\n", sendCount,
+                             transmissionState == RADIOLIB_ERR_NONE ? "finished" : "failed");
 
-                    Serial.println(buf);
+                    setLoRaMessage(buf);
+
+                    // Serial.println(buf);
 
                     // you can also transmit byte array up to 256 bytes long
                     transmissionState = radio.startTransmit(String(sendCount++).c_str());
@@ -613,7 +563,7 @@ void loopRadio()
                 }
                 // snprintf(dispSenderBuff, sizeof(dispSenderBuff), "TX: %u", sendCount);
 
-                runningMillis = millis();
+                senderInterval = millis();
             }
         } else {
 
@@ -659,8 +609,7 @@ void loopRadio()
 
                     snprintf(buf, 256, "RX:%s RSSI:%.2f SNR:%.2f\n", recv.c_str(), radio.getRSSI(), radio.getSNR());
 
-                    lv_textarea_set_text(radio_ta, buf);
-                    lv_obj_add_state(radio_ta, LV_STATE_FOCUSED);
+                    setLoRaMessage(buf);
 
                 } else if (state ==  RADIOLIB_ERR_CRC_MISMATCH) {
                     // packet was received, but is malformed
@@ -708,8 +657,6 @@ void serialToScreen(lv_obj_t *parent, String string,  bool result)
     }
 }
 
-static bool getTouch(int16_t &x, int16_t &y);
-
 bool checkKb()
 {
     int retry = 3;
@@ -727,7 +674,7 @@ void vadTask(void *params)
 {
     Serial.println("vadTask(void *params)");
 
-    vTaskSuspend(NULL);
+    // vTaskSuspend(NULL);
     while (1) {
         size_t read_len = 0;
         if (i2s_read(MIC_I2S_PORT, (char *) vad_buff, vad_buffer_size, &read_len, portMAX_DELAY) == ESP_OK) {
@@ -742,13 +689,17 @@ void vadTask(void *params)
 #endif
             if (vad_state == VAD_SPEECH) {
                 Serial.print(millis());
-                Serial.println(" -> Noise detected!!!");
-                if (vad_btn_label) {
-                    lv_label_set_text_fmt(vad_btn_label, "Noise %u", vad_detected_counter++);
-                }
+                // Serial.println(" -> Noise detected!!!");
+                updateNoiseLabel(vad_detected_counter++);
+                last_update_millis = millis();
+            }
+
+            if (millis() - last_update_millis > 5000) {
+                last_update_millis = millis();
+                vad_detected_counter = 0;
             }
         }
-        delay(5);
+        delay(30);
     }
 }
 
@@ -819,20 +770,14 @@ void setupMicrophoneI2S(i2s_port_t  i2s_ch)
     }
     xTaskCreate(vadTask, "vad", 8 * 1024, NULL, 12, &vadTaskHandler);
 #else
-    xTaskCreate(audioLoopbackTask, "vad", 8 * 1024, NULL, 12, &vadTaskHandler);
+    // xTaskCreate(audioLoopbackTask, "vad", 8 * 1024, NULL, 12, &vadTaskHandler);
 #endif
 
 }
 
+
 void playTTS(const char *filename)
 {
-    vTaskSuspend(vadTaskHandler);
-#ifdef USE_ESP_VAD
-    lv_label_set_text(vad_btn_label, "VAD detect");
-#else
-    lv_label_set_text(vad_btn_label, "loopback");
-#endif
-
     bool findMp3 = false;
     if (SD.exists("/" + String(filename))) {
         findMp3 = audio.connecttoFS(SD, filename);
@@ -853,94 +798,287 @@ void setupAmpI2S(i2s_port_t  i2s_ch)
     audio.setVolume(21);
 }
 
-void lv_button_event_cb(lv_event_t *e)
+void setTx()
 {
-    static uint8_t btn_index = 0;
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *obj = lv_event_get_target(e);
-    if (code == LV_EVENT_CLICKED) {
-        DemoEvent event = *(DemoEvent *)lv_event_get_user_data(e);
+    sender = radio.startTransmit("Hello World!") == RADIOLIB_ERR_NONE;
+}
 
-        if (event != DEMO_GPS_BTN_CLICK_EVENT
-                && event != DEMO_PLAY_BTN_CLICK_EVENT
-                && event != DEMO_VAD_BTN_CLICK_EVENT) {
-            runGPS = false;
-        }
+void setRx()
+{
+    sender = ! (radio.startReceive() == RADIOLIB_ERR_NONE);
+}
 
-        switch (event) {
-        case DEMO_TX_BTN_CLICK_EVENT: {
-            if (!hasRadio) {
-                lv_textarea_set_text(radio_ta, "Radio is not online");
-                return;
-            }
-            lv_textarea_set_text(radio_ta, "");
-            // send the first packet on this node
-            Serial.print(F("[Radio] Sending first packet ... "));
-            transmissionState = radio.startTransmit("Hello World!");
-            sender = true;
-        }
-
-        break;
-        case DEMO_RX_BTN_CLICK_EVENT:
-            Serial.println("DEMO_RX_BTN_CLICK_EVENT");
-            if (!hasRadio) {
-                lv_textarea_set_text(radio_ta, "Radio is not online");
-                return;
-            }
-            {
-                lv_textarea_set_text(radio_ta, "");
-                Serial.print(F("[Radio] Starting to listen ... "));
-                int state = radio.startReceive();
-                if (state == RADIOLIB_ERR_NONE) {
-                    Serial.println(F("success!"));
-                } else {
-                    Serial.print(F("failed, code "));
-                    Serial.println(state);
-                }
-                sender = false;
-            }
-            break;
-        case DEMO_CLEAN_BTN_CLICK_EVENT:
-            Serial.println("DEMO_CLEAN_BTN_CLICK_EVENT");
-            lv_textarea_set_text(radio_ta, "");
-            radio.standby();
-            break;
-        case DEMO_VAD_BTN_CLICK_EVENT:
-            Serial.println("DEMO_VAD_BTN_CLICK_EVENT"); {
-                lv_state_t state =  lv_obj_get_state(obj);
-                if (state == 2) {
-                    vTaskSuspend(vadTaskHandler);
-#ifdef USE_ESP_VAD
-                    lv_label_set_text(vad_btn_label, "VAD detect");
-#else
-                    lv_label_set_text(vad_btn_label, "loopback");
-#endif
-                } else {
-                    vad_detected_counter = 0;
-                    vTaskResume(vadTaskHandler);
-                }
-            }
-            break;
-        case DEMO_PLAY_BTN_CLICK_EVENT:
-            Serial.println("DEMO_PLAY_BTN_CLICK_EVENT");
-            if (playHandle) {
-                vTaskResume(playHandle);
-            }
-            break;
-        case DEMO_SLEEP_BTN_CLICK_EVENT:
-            enterSleep = true;
-            break;
-        case DEMO_GPS_BTN_CLICK_EVENT:
-            Serial.println("DEMO_GPS_BTN_CLICK_EVENT");
-            lv_textarea_set_text(radio_ta, "");
-            radio.standby();
-            runGPS = true;
-            break;
-        default:
-            break;
-        }
+void setFreq(float f)
+{
+    if (radio.setFrequency(f) != RADIOLIB_ERR_NONE) {
+        Serial.println("setFrequency failed!");
     }
 }
+
+void setBandWidth(float bw)
+{
+    if (radio.setBandwidth(bw) != RADIOLIB_ERR_NONE) {
+        Serial.println("setBandwidth failed!");
+    }
+}
+
+void setTxPower(int16_t dBm)
+{
+    if (radio.setOutputPower(dBm) != RADIOLIB_ERR_NONE) {
+        Serial.println("setOutputPower failed!");
+    }
+}
+
+void setSenderInterval(uint32_t interval_ms)
+{
+    configTxInterval = interval_ms;
+}
+
+void soundPlay()
+{
+    if (playHandle) {
+        vTaskResume(playHandle);
+    }
+}
+
+void setup()
+{
+    Serial.begin(115200);
+
+    Serial.println("T-DECK factory");
+
+    //! The board peripheral power control pin needs to be set to HIGH when using the peripheral
+    pinMode(BOARD_POWERON, OUTPUT);
+    digitalWrite(BOARD_POWERON, HIGH);
+
+    //! Set CS on all SPI buses to high level during initialization
+    pinMode(BOARD_SDCARD_CS, OUTPUT);
+    pinMode(RADIO_CS_PIN, OUTPUT);
+    pinMode(BOARD_TFT_CS, OUTPUT);
+
+    digitalWrite(BOARD_SDCARD_CS, HIGH);
+    digitalWrite(RADIO_CS_PIN, HIGH);
+    digitalWrite(BOARD_TFT_CS, HIGH);
+
+    pinMode(BOARD_SPI_MISO, INPUT_PULLUP);
+    SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
+
+    pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G02, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G01, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G04, INPUT_PULLUP);
+    pinMode(BOARD_TBOX_G03, INPUT_PULLUP);
+
+    //Add mutex to allow multitasking access
+    xSemaphore = xSemaphoreCreateBinary();
+    assert(xSemaphore);
+    xSemaphoreGive( xSemaphore );
+
+
+    Serial.print("Init display id:");
+    Serial.println(USER_SETUP_ID);
+
+    tft.begin();
+
+    /**
+     * * T-Deck-Plus and T-Deck display panels are different.
+     * * This initialization is used to override the initialization parameters.
+     * * It is used when the display is abnormal after the TFT_eSPI update. */
+#if 0
+    for (uint8_t i = 0; i < (sizeof(lcd_st7789v) / sizeof(lcd_cmd_t)); i++) {
+        tft.writecommand(lcd_st7789v[i].cmd);
+        for (int j = 0; j < (lcd_st7789v[i].len & 0x7f); j++) {
+            tft.writedata(lcd_st7789v[i].data[j]);
+        }
+
+        if (lcd_st7789v[i].len & 0x80) {
+            delay(120);
+        }
+    }
+#endif
+
+    tft.setRotation( 1 );
+    tft.fillScreen(TFT_BLACK);
+
+    Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
+
+    touch.setPins(-1, BOARD_TOUCH_INT);
+    touchDetected = touch.begin(Wire);
+    if (touchDetected) {
+        Serial.println("Init GT911 Sensor success!");
+
+        // Keep high level when idle, and switch to low level when touched
+        touch.setInterruptMode(LOW_LEVEL_QUERY);
+
+        // Set touch max xy
+        touch.setMaxCoordinates(320, 240);
+
+        // Set swap xy
+        touch.setSwapXY(true);
+
+        // Set mirror xy
+        touch.setMirrorXY(false, true);
+
+    } else {
+        Serial.println("Failed to find GT911 - check your wiring!");
+    }
+
+    kbDetected = checkKb();
+
+
+    pinMode(BOARD_BL_PIN, OUTPUT);
+    setBrightness(16);
+
+
+    setupLvgl();
+
+    // Show logo
+
+    LV_FONT_DECLARE(logo_font);
+    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_black(), LV_PART_MAIN);
+    lv_obj_t *logo = lv_label_create(lv_scr_act());
+    lv_obj_set_style_text_font(logo, &logo_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(logo, lv_color_white(), LV_PART_MAIN);
+    lv_label_set_text(logo, "LilyGo\nT-Deck");
+    lv_obj_center(logo);
+
+    for (int i = 0; i <= 16; ++i) {
+        setBrightness(i);
+        lv_timer_handler();
+        delay(30);
+    }
+
+
+    SPIFFS.begin();
+
+    setupSD();
+
+    setupRadio();
+
+    setupCoder();
+
+    setupAmpI2S(SPK_I2S_PORT);
+
+    setupMicrophoneI2S(MIC_I2S_PORT);
+
+    // Test screen
+#ifdef ENABLE_TEST_IMG
+    lv_obj_t *label;
+
+    const lv_img_dsc_t *img_src[4] = {&image1, &image2, &image3, &image4};
+    lv_obj_t *img = lv_img_create(lv_scr_act());
+    lv_img_set_src(img, (void *)(img_src[3]));
+
+    // Adjust backlight
+    pinMode(BOARD_BL_PIN, OUTPUT);
+    //T-Deck control backlight chip has 16 levels of adjustment range
+    for (int i = 0; i < 16; ++i) {
+        setBrightness(i);
+        lv_task_handler();
+        delay(30);
+    }
+    delay(4000);
+
+    int i = 2;
+    while (i >= 0) {
+        lv_img_set_src(img, (void *)(img_src[i]));
+        lv_task_handler();
+        i--;
+        delay(2000);
+    }
+
+    lv_obj_del(img);
+#endif
+
+
+
+#if 0
+    main_count = lv_obj_create(lv_scr_act());
+    lv_obj_set_style_bg_img_src(main_count, &image_output, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(main_count, LV_OPA_100, 0);
+    lv_obj_set_style_radius(main_count, 0, 0);
+    lv_obj_set_size(main_count, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_flex_flow(main_count, LV_FLEX_FLOW_COLUMN);
+    lv_obj_center(main_count);
+
+    // Show device state
+    serialToScreen(main_count, "Keyboard C3", kbDetected);
+    serialToScreen(main_count, "Capacitive Touch", touchDetected);
+    serialToScreen(main_count, "Radio SX1262", hasRadio);
+    if (SD.cardType() != CARD_NONE) {
+        serialToScreen(main_count, "Mass storage #FFFFFF [# #00ff00  "
+                       + String(SD.cardSize() / 1024 / 1024.0 )
+                       + "MB# #FFFFFF ]#", true);
+    } else {
+        serialToScreen(main_count, "Mass storage", false);
+    }
+
+    uint32_t endTime = millis() + 5000;
+    while (millis() < endTime) {
+        lv_task_handler();
+        delay(1);
+    }
+
+    lv_obj_clean(main_count);
+    lv_obj_set_scroll_dir(main_count, LV_DIR_NONE);
+    lv_obj_set_scrollbar_mode(main_count, LV_SCROLLBAR_MODE_OFF);
+#endif
+
+    setupWiFi();
+
+    if (!setupGPS()) {
+        // set ubox m10q gps baudrate 38400
+        SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+        // Restore factory settings
+        GPS_Recovery();
+    }
+
+
+    lv_obj_del(logo);
+
+    setupUI();
+
+    xTaskCreate(taskPlaySong, "play", 1024 * 4, NULL, 10, &playHandle);
+}
+
+void loop()
+{
+    if (enterSleep) {
+
+        vTaskDelete(playHandle);
+        playHandle = NULL;
+
+#ifdef USE_ESP_VAD
+        vTaskDelete(vadTaskHandler);
+        vadTaskHandler = NULL;
+#endif
+
+        //LilyGo T-Deck control backlight chip has 16 levels of adjustment range
+        for (int i = 16; i > 0; --i) {
+            setBrightness(i);
+            delay(30);
+        }
+
+        delay(1000);
+
+        //If you need other peripherals to maintain power, please set the IO port to hold
+        // gpio_hold_en((gpio_num_t)BOARD_POWERON);
+        // gpio_deep_sleep_hold_en();
+
+        touch.sleep();        //set touchpad enter sleep mode
+        tft.writecommand(0x10);      //set display enter sleep mode
+        SPI.end();
+        Wire.end();
+        esp_sleep_enable_ext1_wakeup(1ull << BOARD_BOOT_PIN, ESP_EXT1_WAKEUP_ALL_LOW);
+        esp_deep_sleep_start();
+        //Deep sleep consumes approximately 240uA of current
+    }
+
+    loopRadio();
+    loopGPS();
+    lv_task_handler();
+}
+
 
 
 // !!! LVGL !!!
@@ -958,35 +1096,6 @@ static void disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *
         lv_disp_flush_ready( disp );
         xSemaphoreGive( xSemaphore );
     }
-}
-
-static bool getTouch(int16_t &x, int16_t &y)
-{
-    uint8_t rotation = tft.getRotation();
-    if (!touch->read()) {
-        return false;
-    }
-    TP_Point t = touch->getPoint(0);
-    switch (rotation) {
-    case 1:
-        x = t.y;
-        y = tft.height() - t.x;
-        break;
-    case 2:
-        x = tft.width() - t.x;
-        y = tft.height() - t.y;
-        break;
-    case 3:
-        x = tft.width() - t.y;
-        y = t.x;
-        break;
-    case 0:
-    default:
-        x = t.x;
-        y = t.y;
-    }
-    Serial.printf("R:%d X:%d Y:%d\n", rotation, x, y);
-    return true;
 }
 
 static void mouse_read(lv_indev_drv_t *indev, lv_indev_data_t *data)
@@ -1045,7 +1154,16 @@ static void mouse_read(lv_indev_drv_t *indev, lv_indev_data_t *data)
 /*Read the touchpad*/
 static void touchpad_read( lv_indev_drv_t *indev_driver, lv_indev_data_t *data )
 {
-    data->state = getTouch(data->point.x, data->point.y) ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+    static int16_t x[5], y[5];
+    data->state =  LV_INDEV_STATE_REL;
+    if (touch.isPressed()) {
+        uint8_t touched = touch.getPoint(x, y, 1);
+        if (touched > 0) {
+            data->state = LV_INDEV_STATE_PR;
+            data->point.x = x[0];
+            data->point.y = y[0];
+        }
+    }
 }
 
 // Read key value from esp32c3
@@ -1075,12 +1193,12 @@ static void keypad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
     data->key = last_key;
 }
 
-void setupLvgl()
+static void setupLvgl()
 {
     static lv_disp_draw_buf_t draw_buf;
     static lv_color_t *buf = (lv_color_t *)ps_malloc(LVGL_BUFFER_SIZE);
     if (!buf) {
-        Serial.println("menory alloc failed!");
+        Serial.println("memory alloc failed!");
         delay(5000);
         assert(buf);
     }
@@ -1110,7 +1228,7 @@ void setupLvgl()
     /*Initialize the  input device driver*/
 
     /*Register a touchscreen input device*/
-    if (touchDected) {
+    if (touchDetected) {
         static lv_indev_drv_t indev_touchpad;
         lv_indev_drv_init( &indev_touchpad );
         indev_touchpad.type = LV_INDEV_TYPE_POINTER;
@@ -1131,7 +1249,7 @@ void setupLvgl()
     lv_img_set_src(cursor_obj, &image_emoji);   /*Set the image source*/
     lv_indev_set_cursor(mouse_indev, cursor_obj);           /*Connect the image  object to the driver*/
 
-    if (kbDected) {
+    if (kbDetected) {
         Serial.println("Keyboard registered!!");
         /*Register a keypad input device*/
         static lv_indev_drv_t indev_keypad;
@@ -1141,343 +1259,107 @@ void setupLvgl()
         kb_indev = lv_indev_drv_register(&indev_keypad);
         lv_indev_set_group(kb_indev, lv_group_get_default());
     }
-
 }
 
-void setup()
+
+
+
+
+
+
+uint8_t buffer[256];
+
+int getAck(uint8_t *buffer, uint16_t size, uint8_t requestedClass, uint8_t requestedID)
 {
-    Serial.begin(115200);
+    uint16_t    ubxFrameCounter = 0;
+    bool        ubxFrame = 0;
+    uint32_t    startTime = millis();
+    uint16_t    needRead;
 
-    Serial.println("T-DECK factory");
+    while (millis() - startTime < 800) {
+        while (SerialGPS.available()) {
+            int c = SerialGPS.read();
+            switch (ubxFrameCounter) {
+            case 0:
+                if (c == 0xB5) {
+                    ubxFrameCounter++;
+                }
+                break;
+            case 1:
+                if (c == 0x62) {
+                    ubxFrameCounter++;
+                } else {
+                    ubxFrameCounter = 0;
+                }
+                break;
+            case 2:
+                if (c == requestedClass) {
+                    ubxFrameCounter++;
+                } else {
+                    ubxFrameCounter = 0;
+                }
+                break;
+            case 3:
+                if (c == requestedID) {
+                    ubxFrameCounter++;
+                } else {
+                    ubxFrameCounter = 0;
+                }
+                break;
+            case 4:
+                needRead = c;
+                ubxFrameCounter++;
+                break;
+            case 5:
+                needRead |=  (c << 8);
+                ubxFrameCounter++;
+                break;
+            case 6:
+                if (needRead >= size) {
+                    ubxFrameCounter = 0;
+                    break;
+                }
+                if (SerialGPS.readBytes(buffer, needRead) != needRead) {
+                    ubxFrameCounter = 0;
+                } else {
+                    return needRead;
+                }
+                break;
 
-    //! The board peripheral power control pin needs to be set to HIGH when using the peripheral
-    pinMode(BOARD_POWERON, OUTPUT);
-    digitalWrite(BOARD_POWERON, HIGH);
-
-    //! Set CS on all SPI buses to high level during initialization
-    pinMode(BOARD_SDCARD_CS, OUTPUT);
-    pinMode(RADIO_CS_PIN, OUTPUT);
-    pinMode(BOARD_TFT_CS, OUTPUT);
-
-    digitalWrite(BOARD_SDCARD_CS, HIGH);
-    digitalWrite(RADIO_CS_PIN, HIGH);
-    digitalWrite(BOARD_TFT_CS, HIGH);
-
-    pinMode(BOARD_SPI_MISO, INPUT_PULLUP);
-    SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
-
-    pinMode(BOARD_BOOT_PIN, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_G02, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_G01, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_G04, INPUT_PULLUP);
-    pinMode(BOARD_TBOX_G03, INPUT_PULLUP);
-
-    //Wakeup touch chip
-    pinMode(BOARD_TOUCH_INT, OUTPUT);
-    digitalWrite(BOARD_TOUCH_INT, HIGH);
-
-    //Add mutex to allow multitasking access
-    xSemaphore = xSemaphoreCreateBinary();
-    assert(xSemaphore);
-    xSemaphoreGive( xSemaphore );
-
-
-    Serial.print("Init display id:");
-    Serial.println(USER_SETUP_ID);
-
-    tft.begin();
-
-    /**
-     * * T-Deck-Plus and T-Deck display panels are different.
-     * * This initialization is used to override the initialization parameters.
-     * * It is used when the display is abnormal after the TFT_eSPI update. */
-#if 0
-    for (uint8_t i = 0; i < (sizeof(lcd_st7789v) / sizeof(lcd_cmd_t)); i++) {
-        tft.writecommand(lcd_st7789v[i].cmd);
-        for (int j = 0; j < (lcd_st7789v[i].len & 0x7f); j++) {
-            tft.writedata(lcd_st7789v[i].data[j]);
+            default:
+                break;
+            }
         }
-
-        if (lcd_st7789v[i].len & 0x80) {
-            delay(120);
-        }
     }
-#endif
+    return 0;
+}
 
-    tft.setRotation( 1 );
-    tft.fillScreen(TFT_BLACK);
+static bool GPS_Recovery()
+{
+    uint8_t cfg_clear1[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x1C, 0xA2};
+    uint8_t cfg_clear2[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x1B, 0xA1};
+    uint8_t cfg_clear3[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x03, 0x1D, 0xB3};
+    SerialGPS.write(cfg_clear1, sizeof(cfg_clear1));
 
-
-    setupWiFi();
-
-    if (!setupGPS()) {
-        // set ubox m10q gps baudrate 38400
-        SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+    if (getAck(buffer, 256, 0x05, 0x01)) {
+        Serial.println("Get ack successes!");
     }
-
-
-    Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
-
-
-    // Set touch int input
-    pinMode(BOARD_TOUCH_INT, INPUT); delay(20);
-
-    // Two touch screens, the difference between them is the device address,
-    // use ScanDevices to get the existing I2C address
-    scanDevices(&Wire);
-
-    touch = new TouchLib(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, touchAddress);
-
-    touch->init();
-
-    Wire.beginTransmission(touchAddress);
-    touchDected = Wire.endTransmission() == 0;
-
-    kbDected = checkKb();
-
-
-    setupLvgl();
-
-    SPIFFS.begin();
-
-    setupSD();
-
-    setupRadio();
-
-    setupCoder();
-
-    setupAmpI2S(SPK_I2S_PORT);
-
-    setupMicrophoneI2S(MIC_I2S_PORT);
-
-    // Test screen
-    lv_obj_t *label;
-
-    const lv_img_dsc_t *img_src[4] = {&image1, &image2, &image3, &image4};
-    lv_obj_t *img = lv_img_create(lv_scr_act());
-    lv_img_set_src(img, (void *)(img_src[3]));
-
-    // Adjust backlight
-    pinMode(BOARD_BL_PIN, OUTPUT);
-    //T-Deck control backlight chip has 16 levels of adjustment range
-    for (int i = 0; i < 16; ++i) {
-        setBrightness(i);
-        lv_task_handler();
-        delay(30);
+    SerialGPS.write(cfg_clear2, sizeof(cfg_clear2));
+    if (getAck(buffer, 256, 0x05, 0x01)) {
+        Serial.println("Get ack successes!");
     }
-    delay(4000);
-
-    int i = 2;
-    while (i >= 0) {
-        lv_img_set_src(img, (void *)(img_src[i]));
-        lv_task_handler();
-        i--;
-        delay(2000);
+    SerialGPS.write(cfg_clear3, sizeof(cfg_clear3));
+    if (getAck(buffer, 256, 0x05, 0x01)) {
+        Serial.println("Get ack successes!");
     }
 
-    lv_obj_del(img);
-
-
-
-    main_count = lv_obj_create(lv_scr_act());
-    lv_obj_set_style_bg_img_src(main_count, &image_output, LV_PART_MAIN);
-    lv_obj_set_style_border_opa(main_count, LV_OPA_100, 0);
-    lv_obj_set_style_radius(main_count, 0, 0);
-    lv_obj_set_size(main_count, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_flex_flow(main_count, LV_FLEX_FLOW_COLUMN);
-    lv_obj_center(main_count);
-
-    // Show device state
-    serialToScreen(main_count, "Keyboard C3", kbDected);
-
-    serialToScreen(main_count, "Capacitive Touch", touchDected);
-    serialToScreen(main_count, "Radio SX1262", hasRadio);
-    if (SD.cardType() != CARD_NONE) {
-        serialToScreen(main_count, "Mass storage #FFFFFF [# #00ff00  "
-                       + String(SD.cardSize() / 1024 / 1024.0 )
-                       + "MB# #FFFFFF ]#", true);
+    // UBX-CFG-RATE, Size 8, 'Navigation/measurement rate settings'
+    uint8_t cfg_rate[] = {0xB5, 0x62, 0x06, 0x08, 0x00, 0x00, 0x0E, 0x30};
+    SerialGPS.write(cfg_rate, sizeof(cfg_rate));
+    if (getAck(buffer, 256, 0x06, 0x08)) {
+        Serial.println("Get ack successes!");
     } else {
-        serialToScreen(main_count, "Mass storage", false);
+        return false;
     }
-
-    uint32_t endTime = millis() + 5000;
-    while (millis() < endTime) {
-        lv_task_handler();
-        delay(1);
-    }
-
-    lv_obj_clean(main_count);
-    lv_obj_set_scroll_dir(main_count, LV_DIR_NONE);
-    lv_obj_set_scrollbar_mode(main_count, LV_SCROLLBAR_MODE_OFF);
-
-
-    // Simple GUI for factory test
-    lv_obj_t *win_ui =  lv_obj_create(main_count);
-    lv_obj_set_style_border_width(win_ui, 0, LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(win_ui, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(win_ui, 0, LV_PART_MAIN);
-    lv_obj_set_size(win_ui, LV_PCT(100), LV_PCT(55));
-
-    radio_ta = lv_textarea_create(win_ui);
-    lv_obj_set_style_bg_opa(radio_ta, LV_OPA_50, 0);
-    lv_textarea_set_cursor_click_pos(radio_ta, false);
-    lv_textarea_set_text_selection(radio_ta, false);
-    lv_obj_set_size(radio_ta, LV_PCT(100), LV_PCT(100));
-    lv_textarea_set_text(radio_ta, "");
-    lv_textarea_set_max_length(radio_ta, 1024);
-
-    lv_obj_t *btn_ui =  lv_obj_create(main_count);
-    lv_obj_set_style_bg_opa(btn_ui, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_size(btn_ui, LV_PCT(100), LV_PCT(20));
-    lv_obj_set_flex_flow(btn_ui, LV_FLEX_FLOW_ROW);
-    lv_obj_align_to(btn_ui, radio_ta, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_pad_top(btn_ui, 1, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(btn_ui, 1, LV_PART_MAIN);
-
-    lv_obj_t *btn1 = lv_btn_create(btn_ui);
-    lv_obj_set_size(btn1, LV_PCT(21), LV_PCT(100));
-    lv_obj_add_event_cb(btn1, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[0]);
-    label = lv_label_create(btn1);
-    lv_label_set_text(label, "Tx");
-    lv_obj_set_user_data(btn1, label);
-    lv_obj_center(label);
-
-    lv_obj_t *btn2 = lv_btn_create(btn_ui);
-    lv_obj_set_size(btn2, LV_PCT(21), LV_PCT(100));
-    lv_obj_add_event_cb(btn2, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[1]);
-    label = lv_label_create(btn2);
-    lv_label_set_text(label, "Rx");
-    lv_obj_center(label);
-
-    lv_obj_t *btn3 = lv_btn_create(btn_ui);
-    lv_obj_set_size(btn3, LV_PCT(21), LV_PCT(100));
-    lv_obj_add_event_cb(btn3, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[2]);
-    label = lv_label_create(btn3);
-    lv_label_set_text(label, "Clean");
-    lv_obj_center(label);
-
-    lv_obj_t *sleep = lv_btn_create(btn_ui);
-    lv_obj_set_size(sleep, LV_PCT(25), LV_PCT(100));
-    lv_obj_add_event_cb(sleep, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[5]);
-    label = lv_label_create(sleep);
-    lv_label_set_text(label, "Sleep");
-    lv_obj_center(label);
-
-
-    label = lv_label_create(lv_scr_act());
-    lv_label_set_text(label, "00:00:00");
-    lv_obj_align(label, LV_ALIGN_TOP_RIGHT, 0, 0);
-
-    lv_timer_create([](lv_timer_t *t) {
-        lv_obj_t *label = (lv_obj_t *)t->user_data;
-        if (WiFi.isConnected()) {
-            time_t now;
-            struct tm  timeinfo;
-            time(&now);
-            localtime_r(&now, &timeinfo);
-
-            char datetime[128] = {0};
-            snprintf(datetime, 128, "%d/%d/%d %d:%d:%d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-            lv_label_set_text_fmt(label, "%s\nIP:%s\nRSSI:%d", datetime, WiFi.localIP().toString().c_str(), WiFi.RSSI());
-        } else {
-            lv_label_set_text(label, "NO CONNECT");
-        }
-
-    }, 1000, label);
-
-
-
-    lv_obj_t *btn_ui2 =  lv_obj_create(main_count);
-    lv_obj_set_style_bg_opa(btn_ui2, LV_OPA_TRANSP, 0);
-    lv_obj_set_size(btn_ui2, LV_PCT(100), LV_PCT(20));
-    lv_obj_set_flex_flow(btn_ui2, LV_FLEX_FLOW_ROW);
-    lv_obj_align_to(btn_ui2, btn_ui, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_pad_top(btn_ui2, 1, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(btn_ui2, 1, LV_PART_MAIN);
-
-    lv_obj_t *btn4 = lv_btn_create(btn_ui2);
-    lv_obj_set_size(btn4, LV_PCT(30), LV_PCT(100));
-    lv_obj_add_flag(btn4, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_add_event_cb(btn4, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[3]);
-    vad_btn_label = lv_label_create(btn4);
-#ifdef USE_ESP_VAD
-    lv_label_set_text(vad_btn_label, "Noise detection");
-#else
-    lv_label_set_text(vad_btn_label, "loopback");
-#endif
-    lv_obj_center(vad_btn_label);
-
-    lv_obj_t *btn5 = lv_btn_create(btn_ui2);
-    lv_obj_set_size(btn5, LV_PCT(30), LV_PCT(100));
-    lv_obj_add_event_cb(btn5, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[4]);
-    label = lv_label_create(btn5);
-    lv_label_set_text(label, "Play MP3");
-    lv_obj_center(label);
-
-    lv_obj_t *btn6 = lv_btn_create(btn_ui2);
-    lv_obj_set_size(btn6, LV_PCT(30), LV_PCT(100));
-    lv_obj_add_event_cb(btn6, lv_button_event_cb, LV_EVENT_CLICKED, (void *)&event[6]);
-    label = lv_label_create(btn6);
-    lv_label_set_text(label, "GPS");
-    lv_obj_center(label);
-
-
-    xTaskCreate(taskplaySong, "play", 1024 * 4, NULL, 10, &playHandle);
+    return true;
 }
-
-void loop()
-{
-    if (enterSleep) {
-
-        lv_obj_clean(main_count);
-        lv_obj_t *label = lv_label_create(main_count);
-        lv_label_set_text(label, "Sleep");
-        lv_obj_center(label);
-
-        //LilyGo T-Deck control backlight chip has 16 levels of adjustment range
-        for (int i = 16; i > 0; --i) {
-            setBrightness(i);
-            lv_task_handler();
-            delay(30);
-        }
-
-        delay(1000);
-
-        //If you need other peripherals to maintain power, please set the IO port to hold
-        // gpio_hold_en((gpio_num_t)BOARD_POWERON);
-        // gpio_deep_sleep_hold_en();
-
-        // When sleeping, set the touch and display screen to sleep, and all other peripherals will be powered off
-        pinMode(BOARD_TOUCH_INT, OUTPUT);
-        digitalWrite(BOARD_TOUCH_INT, LOW); //Before touch to set sleep, it is necessary to set INT to LOW
-        touch->enableSleep();        //set touchpad enter sleep mode
-        tft.writecommand(0x10);      //set disaplay enter sleep mode
-        SPI.end();
-        Wire.end();
-        esp_sleep_enable_ext1_wakeup(1ull << BOARD_BOOT_PIN, ESP_EXT1_WAKEUP_ALL_LOW);
-        esp_deep_sleep_start();
-        //Deep sleep consumes approximately 240uA of current
-    }
-
-    loopRadio();
-    loopGPS();
-    lv_task_handler();
-    delay(1);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

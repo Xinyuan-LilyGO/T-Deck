@@ -53,3 +53,33 @@
 #define BOARD_BOOT_PIN      0
 
 #define BOARD_BL_PIN        42
+
+
+#define BOARD_GPS_TX_PIN                 43
+#define BOARD_GPS_RX_PIN                 44
+
+
+#ifndef RADIO_FREQ
+#define RADIO_FREQ           868.0
+#endif
+
+#ifndef RADIO_BANDWIDTH
+#define RADIO_BANDWIDTH      125.0
+#endif
+
+#ifndef RADIO_SF
+#define RADIO_SF             10
+#endif
+
+#ifndef RADIO_CR
+#define RADIO_CR             6
+#endif
+
+#ifndef RADIO_TX_POWER
+#define RADIO_TX_POWER       22
+#endif
+
+#define DEFAULT_OPA          100
+
+
+

@@ -12,7 +12,16 @@
 #include "es7210.h"
 #include "utilities.h"
 
-
+#if ESP_ARDUINO_VERSION != ESP_ARDUINO_VERSION_VAL(2,0,9)
+void setup()
+{
+    Serial.begin(115200);
+}
+void loop()
+{
+    Serial.println("Can only run on arduino-esp32 core version 2.0.9"); delay(1000);
+}
+#else
 #define VAD_SAMPLE_RATE_HZ              16000
 #define VAD_FRAME_LENGTH_MS             30
 #define VAD_BUFFER_LENGTH               (VAD_FRAME_LENGTH_MS * VAD_SAMPLE_RATE_HZ / 1000)
@@ -110,3 +119,4 @@ void loop()
     }
     delay(5);
 }
+#endif

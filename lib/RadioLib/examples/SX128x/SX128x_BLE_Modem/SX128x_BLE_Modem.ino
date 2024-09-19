@@ -43,7 +43,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while (true);
+    while (true) { delay(10); }
   }
 
   // if needed, you can switch between any of the modems
@@ -62,10 +62,10 @@ void setup() {
   if (state != RADIOLIB_ERR_NONE) {
     Serial.print(F("Unable to set configuration, code "));
     Serial.println(state);
-    while (true);
+    while (true) { delay(10); }
   }
 
-  #warning "This sketch is just an API guide! Read the note at line 6."
+  #warning "This sketch is just an API guide! Read the note at line 8."
 }
 
 void loop() {

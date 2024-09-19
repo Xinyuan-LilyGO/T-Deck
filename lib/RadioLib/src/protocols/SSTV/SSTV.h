@@ -1,9 +1,9 @@
-#if !defined(_RADIOLIB_RADIOLIB_SSTV_H)
-#define _RADIOLIB_RADIOLIB_SSTV_H
+#if !defined(_RADIOLIB_SSTV_H)
+#define _RADIOLIB_SSTV_H
 
 #include "../../TypeDef.h"
 
-#if !defined(RADIOLIB_EXCLUDE_SSTV)
+#if !RADIOLIB_EXCLUDE_SSTV
 
 #include "../PhysicalLayer/PhysicalLayer.h"
 #include "../AFSK/AFSK.h"
@@ -21,6 +21,8 @@
 #define RADIOLIB_SSTV_PASOKON_P3                                113
 #define RADIOLIB_SSTV_PASOKON_P5                                114
 #define RADIOLIB_SSTV_PASOKON_P7                                115
+#define RADIOLIB_SSTV_ROBOT_36                                  8
+#define RADIOLIB_SSTV_ROBOT_72                                  12
 
 // SSTV tones in Hz
 #define RADIOLIB_SSTV_TONE_LEADER                               1900
@@ -37,7 +39,6 @@
 
 /*!
   \struct tone_t
-
   \brief Structure to save data about tone.
 */
 struct tone_t {
@@ -47,15 +48,15 @@ struct tone_t {
   */
   enum {
     GENERIC = 0,
-    SCAN_GREEN,
-    SCAN_BLUE,
-    SCAN_RED
+    SCAN_GREEN_Y,
+    SCAN_BLUE_CB,
+    SCAN_RED_CR
   } type;
 
   /*!
     \brief Length of tone in us, set to 0 for picture scan tones.
   */
-  uint32_t len;
+  RadioLibTime_t len;
 
   /*!
     \brief Frequency of tone in Hz, set to 0 for picture scan tones.
@@ -65,7 +66,6 @@ struct tone_t {
 
 /*!
   \struct SSTVMode_t
-
   \brief Structure to save data about supported SSTV modes.
 */
 struct SSTVMode_t {
@@ -98,7 +98,7 @@ struct SSTVMode_t {
   /*!
     \brief Sequence of tones in each transmission line. This is used to create the correct encoding sequence.
   */
-  tone_t tones[8];
+  tone_t tones[9];
 };
 
 // all currently supported SSTV modes
@@ -111,25 +111,24 @@ extern const SSTVMode_t Wrasse;
 extern const SSTVMode_t PasokonP3;
 extern const SSTVMode_t PasokonP5;
 extern const SSTVMode_t PasokonP7;
+extern const SSTVMode_t Robot36;
+extern const SSTVMode_t Robot72;
 
 /*!
   \class SSTVClient
-
   \brief Client for SSTV transmissions.
 */
 class SSTVClient {
   public:
     /*!
       \brief Constructor for 2-FSK mode.
-
       \param phy Pointer to the wireless module providing PhysicalLayer communication.
     */
     explicit SSTVClient(PhysicalLayer* phy);
 
-    #if !defined(RADIOLIB_EXCLUDE_AFSK)
+    #if !RADIOLIB_EXCLUDE_AFSK
     /*!
       \brief Constructor for AFSK mode.
-
       \param audio Pointer to the AFSK instance providing audio.
     */
     explicit SSTVClient(AFSKClient* audio);
@@ -139,29 +138,32 @@ class SSTVClient {
 
     /*!
       \brief Initialization method for 2-FSK.
-
       \param base Base "0 Hz tone" RF frequency to be used in MHz.
-
-      \param mode SSTV mode to be used. Currently supported modes are Scottie1, Scottie2, ScottieDX, Martin1, Martin2, Wrasse, PasokonP3, PasokonP5 and PasokonP7.
-
-      \param correction Timing correction factor, used to adjust the length of timing pulses. Less than 1.0 leads to shorter timing pulses, defaults to 1.0 (no correction).
-
+      \param mode SSTV mode to be used. Currently supported modes are Scottie1, Scottie2, 
+      ScottieDX, Martin1, Martin2, Wrasse, PasokonP3, PasokonP5 and PasokonP7,
+      Robot36 and Robot37.
       \returns \ref status_codes
     */
-    int16_t begin(float base, const SSTVMode_t& mode, float correction = 1.0);
+    int16_t begin(float base, const SSTVMode_t& mode);
 
-    #if !defined(RADIOLIB_EXCLUDE_AFSK)
+    #if !RADIOLIB_EXCLUDE_AFSK
     /*!
       \brief Initialization method for AFSK.
-
-      \param mode SSTV mode to be used. Currently supported modes are Scottie1, Scottie2, ScottieDX, Martin1, Martin2, Wrasse, PasokonP3, PasokonP5 and PasokonP7.
-
-      \param correction Timing correction factor, used to adjust the length of timing pulses. Less than 1.0 leads to shorter timing pulses, defaults to 1.0 (no correction).
-
+      \param mode SSTV mode to be used. Currently supported modes are Scottie1, Scottie2,
+      ScottieDX, Martin1, Martin2, Wrasse, PasokonP3, PasokonP5 and PasokonP7,
+      Robot36 and Robot37.
       \returns \ref status_codes
     */
-    int16_t begin(const SSTVMode_t& mode, float correction = 1.0);
+    int16_t begin(const SSTVMode_t& mode);
     #endif
+
+    /*!
+      \brief Set correction coefficient for tone length.
+      \param correction Timing correction factor, used to adjust the length of timing pulses.
+      Less than 1.0 leads to shorter timing pulses, defaults to 1.0 (no correction).
+      \returns \ref status_codes
+    */
+    int16_t setCorrection(float correction);
 
     /*!
       \brief Sends out tone at 1900 Hz.
@@ -175,31 +177,30 @@ class SSTVClient {
 
     /*!
       \brief Sends single picture line in the currently configured SSTV mode.
-
-      \param imgLine Image line to send, in 24-bit RGB. It is up to the user to ensure that imgLine has enough pixels to send it in the current SSTV mode.
+      \param imgLine Image line to send, in 24-bit RGB. It is up to the user to ensure that
+      imgLine has enough pixels to send it in the current SSTV mode.
     */
-    void sendLine(uint32_t* imgLine);
+    void sendLine(const uint32_t* imgLine);
 
     /*!
       \brief Get picture height of the currently configured SSTV mode.
-
       \returns Picture height of the currently configured SSTV mode in pixels.
     */
     uint16_t getPictureHeight() const;
 
-#if !defined(RADIOLIB_GODMODE)
+#if !RADIOLIB_GODMODE
   private:
 #endif
-    PhysicalLayer* _phy;
-    #if !defined(RADIOLIB_EXCLUDE_AFSK)
-    AFSKClient* _audio;
+    PhysicalLayer* phyLayer;
+    #if !RADIOLIB_EXCLUDE_AFSK
+    AFSKClient* audioClient;
     #endif
 
-    uint32_t _base = 0;
-    SSTVMode_t _mode = Scottie1;
-    bool _firstLine = true;
+    uint32_t baseFreq = 0;
+    SSTVMode_t txMode = Scottie1;
+    uint32_t lineCount = 0;
 
-    void tone(float freq, uint32_t len = 0);
+    void tone(float freq, RadioLibTime_t len = 0);
 };
 
 #endif

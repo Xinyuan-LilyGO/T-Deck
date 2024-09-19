@@ -96,7 +96,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while (true);
+    while (true) { delay(10); }
   }
 
   // when using one of the non-LoRa modules for SSTV
@@ -107,7 +107,16 @@ void setup() {
   Serial.print(F("[SSTV] Initializing ... "));
   // 0 Hz tone frequency:         434.0 MHz
   // SSTV mode:                   Wrasse (SC2-180)
-  // correction factor:           0.95
+  state = sstv.begin(434.0, Wrasse);
+  if(state == RADIOLIB_ERR_NONE) {
+    Serial.println(F("success!"));
+  } else {
+    Serial.print(F("failed, code "));
+    Serial.println(state);
+    while (true) { delay(10); }
+  }
+
+  // set correction factor
   // NOTE: Due to different speeds of various platforms
   //       supported by RadioLib (Arduino Uno, ESP32 etc),
   //       and because SSTV is analog protocol, incorrect
@@ -116,13 +125,14 @@ void setup() {
   //       to adjust the length of timing pulses
   //       (lower number = shorter pulses).
   //       The value is usually around 0.95 (95%).
-  state = sstv.begin(434.0, Wrasse, 0.95);
+  Serial.print(F("[SSTV] Setting correction ... "));
+  state = sstv.setCorrection(0.95);
   if(state == RADIOLIB_ERR_NONE) {
     Serial.println(F("success!"));
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while(true);
+    while (true) { delay(10); }
   }
 
   // to help tune the receiver, SSTVClient can send
@@ -131,7 +141,7 @@ void setup() {
   // (SSTV header "leader tone")
   /*
     sstv.idle();
-    while(true);
+    while (true) { delay(10); }
   */
 }
 

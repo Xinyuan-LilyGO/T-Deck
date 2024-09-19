@@ -38,16 +38,22 @@
 #include "TypeDef.h"
 #include "Module.h"
 
+#include "Hal.h"
+#if defined(RADIOLIB_BUILD_ARDUINO)
+#include "ArduinoHal.h"
+#endif
+
+
 // warnings are printed in this file since BuildOpt.h is compiled in multiple places
 
 // check God mode
-#if defined(RADIOLIB_GODMODE)
+#if RADIOLIB_GODMODE
   #warning "God mode active, I hope it was intentional. Buckle up, lads."
 #endif
 
 // print debug info
-#if defined(RADIOLIB_DEBUG)
-  #pragma message "RADIOLIB_PLATFORM: " RADIOLIB_PLATFORM
+#if RADIOLIB_DEBUG
+  #pragma message(RADIOLIB_INFO)
 #endif
 
 // check unknown/unsupported platform
@@ -55,22 +61,29 @@
   #warning "RadioLib might not be compatible with this Arduino board - check supported platforms at https://github.com/jgromes/RadioLib!"
 #endif
 
+// print warning for low-end platforms
+#if defined(RADIOLIB_LOWEND_PLATFORM)
+  #warning "Low-end platform detected, stability issues are likely!"
+#endif
+
 #include "modules/CC1101/CC1101.h"
 #include "modules/LLCC68/LLCC68.h"
+#include "modules/LR11x0/LR1110.h"
+#include "modules/LR11x0/LR1120.h"
+#include "modules/LR11x0/LR1121.h"
 #include "modules/nRF24/nRF24.h"
 #include "modules/RF69/RF69.h"
 #include "modules/RFM2x/RFM22.h"
 #include "modules/RFM2x/RFM23.h"
-#include "modules/RFM9x/RFM95.h"
-#include "modules/RFM9x/RFM96.h"
-#include "modules/RFM9x/RFM97.h"
 #include "modules/Si443x/Si4430.h"
 #include "modules/Si443x/Si4431.h"
 #include "modules/Si443x/Si4432.h"
-#include "modules/SX1231/SX1231.h"
+#include "modules/SX123x/SX1231.h"
+#include "modules/SX123x/SX1233.h"
 #include "modules/SX126x/SX1261.h"
 #include "modules/SX126x/SX1262.h"
 #include "modules/SX126x/SX1268.h"
+#include "modules/SX126x/STM32WLx.h"
 #include "modules/SX127x/SX1272.h"
 #include "modules/SX127x/SX1273.h"
 #include "modules/SX127x/SX1276.h"
@@ -87,13 +100,22 @@
 #include "protocols/AX25/AX25.h"
 #include "protocols/Hellschreiber/Hellschreiber.h"
 #include "protocols/Morse/Morse.h"
+#include "protocols/Pager/Pager.h"
 #include "protocols/RTTY/RTTY.h"
 #include "protocols/SSTV/SSTV.h"
 #include "protocols/FSK4/FSK4.h"
 #include "protocols/APRS/APRS.h"
+#include "protocols/ExternalRadio/ExternalRadio.h"
+#include "protocols/Print/Print.h"
+#include "protocols/BellModem/BellModem.h"
+#include "protocols/LoRaWAN/LoRaWAN.h"
+
+// utilities
+#include "utils/CRC.h"
+#include "utils/Cryptography.h"
 
 // only create Radio class when using RadioShield
-#if defined(RADIOLIB_RADIOSHIELD)
+#if RADIOLIB_RADIOSHIELD
 
 // RadioShield pin definitions
 #define RADIOSHIELD_CS_A    10
@@ -125,7 +147,7 @@ class Radio {
       ModuleB = new Module(RADIOSHIELD_CS_B, RADIOSHIELD_IRQ_B, RADIOSHIELD_RST_B, RADIOSHIELD_GPIO_B);
     }
 
-#if defined(RADIOLIB_GODMODE)
+#if RADIOLIB_GODMODE
   private:
 #endif
 

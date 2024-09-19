@@ -1,29 +1,20 @@
-#if !defined(_RADIOLIB_RADIOLIB_AX25_H)
-#define _RADIOLIB_RADIOLIB_AX25_H
+#if !defined(_RADIOLIB_AX25_H)
+#define _RADIOLIB_AX25_H
 
 #include "../../TypeDef.h"
 
-#if !defined(RADIOLIB_EXCLUDE_AX25)
+#if !RADIOLIB_EXCLUDE_AX25
 
 #include "../PhysicalLayer/PhysicalLayer.h"
 #include "../AFSK/AFSK.h"
-
-// macros to access bits in byte array, from http://www.mathcs.emory.edu/~cheung/Courses/255/Syllabus/1-C-intro/bit-array.html
-#define SET_BIT_IN_ARRAY(A, k)                                  ( A[(k/8)] |= (1 << (k%8)) )
-#define CLEAR_BIT_IN_ARRAY(A, k)                                ( A[(k/8)] &= ~(1 << (k%8)) )
-#define TEST_BIT_IN_ARRAY(A, k)                                 ( A[(k/8)] & (1 << (k%8)) )
-#define GET_BIT_IN_ARRAY(A, k)                                  ( (A[(k/8)] & (1 << (k%8))) ? 1 : 0 )
-
-// CRC-CCITT calculation macros
-#define XOR(A, B)                                               ( ((A) || (B)) && !((A) && (B)) )
-#define CRC_CCITT_POLY                                          0x1021      //  generator polynomial
-#define CRC_CCITT_POLY_REVERSED                                 0x8408      //  CRC_CCITT_POLY in reversed bit order
-#define CRC_CCITT_INIT                                          0xFFFF      //  initial value
+#include "../BellModem/BellModem.h"
+#include "../../utils/CRC.h"
+#include "../../utils/FEC.h"
 
 // maximum callsign length in bytes
 #define RADIOLIB_AX25_MAX_CALLSIGN_LEN                          6
 
-// flag field                                                         MSB   LSB   DESCRIPTION
+// flag field                                                                 MSB   LSB   DESCRIPTION
 #define RADIOLIB_AX25_FLAG                                      0b01111110  //  7     0     AX.25 frame start/end flag
 
 // address field
@@ -73,16 +64,8 @@
 #define RADIOLIB_AX25_PID_NO_LAYER_3                            0xF0
 #define RADIOLIB_AX25_PID_ESCAPE_CHARACTER                      0xFF
 
-// AFSK tones in Hz
-#define RADIOLIB_AX25_AFSK_MARK                                 1200
-#define RADIOLIB_AX25_AFSK_SPACE                                2200
-
-// tone duration in us (for 1200 baud AFSK)
-#define RADIOLIB_AX25_AFSK_TONE_DURATION                        833
-
 /*!
   \class AX25Frame
-
   \brief Abstraction of AX.25 frame format.
 */
 class AX25Frame {
@@ -137,7 +120,7 @@ class AX25Frame {
     */
     uint16_t sendSeqNumber;
 
-    #if !defined(RADIOLIB_STATIC_ONLY)
+    #if !RADIOLIB_STATIC_ONLY
       /*!
         \brief The info field.
       */
@@ -171,62 +154,41 @@ class AX25Frame {
 
     /*!
       \brief Overloaded constructor, for frames without info field.
-
       \param destCallsign Callsign of the destination station.
-
       \param destSSID SSID of the destination station.
-
       \param srcCallsign Callsign of the source station.
-
       \param srcSSID SSID of the source station.
-
       \param control The control field.
     */
     AX25Frame(const char* destCallsign, uint8_t destSSID, const char* srcCallsign, uint8_t srcSSID, uint8_t control);
 
     /*!
       \brief Overloaded constructor, for frames with C-string info field.
-
       \param destCallsign Callsign of the destination station.
-
       \param destSSID SSID of the destination station.
-
       \param srcCallsign Callsign of the source station.
-
       \param srcSSID SSID of the source station.
-
       \param control The control field.
-
       \param protocolID The protocol identifier (PID) field. Set to zero if the frame doesn't have this field.
-
       \param info Information field, in the form of null-terminated C-string.
     */
     AX25Frame(const char* destCallsign, uint8_t destSSID, const char* srcCallsign, uint8_t srcSSID, uint8_t control, uint8_t protocolID, const char* info);
 
     /*!
       \brief Default constructor.
-
       \param destCallsign Callsign of the destination station.
-
       \param destSSID SSID of the destination station.
-
       \param srcCallsign Callsign of the source station.
-
       \param srcSSID SSID of the source station.
-
       \param control The control field.
-
       \param protocolID The protocol identifier (PID) field. Set to zero if the frame doesn't have this field.
-
       \param info Information field, in the form of arbitrary binary buffer.
-
       \param infoLen Number of bytes in the information field.
     */
     AX25Frame(const char* destCallsign, uint8_t destSSID, const char* srcCallsign, uint8_t srcSSID, uint8_t control, uint8_t protocolID, uint8_t* info, uint16_t infoLen);
 
     /*!
       \brief Copy constructor.
-
       \param frame AX25Frame instance to copy.
     */
     AX25Frame(const AX25Frame& frame);
@@ -238,34 +200,27 @@ class AX25Frame {
 
     /*!
       \brief Overload for assignment operator.
-
       \param frame rvalue AX25Frame.
     */
     AX25Frame& operator=(const AX25Frame& frame);
 
     /*!
       \brief Method to set the repeater callsigns and SSIDs.
-
       \param repeaterCallsigns Array of repeater callsigns in the form of null-terminated C-strings.
-
       \param repeaterSSIDs Array of repeater SSIDs.
-
       \param numRepeaters Number of repeaters, maximum is 8.
-
       \returns \ref status_codes
     */
     int16_t setRepeaters(char** repeaterCallsigns, uint8_t* repeaterSSIDs, uint8_t numRepeaters);
 
     /*!
       \brief Method to set receive sequence number.
-
       \param seqNumber Sequence number to set, 0 to 7.
     */
     void setRecvSequence(uint8_t seqNumber);
 
     /*!
       \brief Method to set send sequence number.
-
       \param seqNumber Sequence number to set, 0 to 7.
     */
     void setSendSequence(uint8_t seqNumber);
@@ -273,92 +228,102 @@ class AX25Frame {
 
 /*!
   \class AX25Client
-
   \brief Client for AX25 communication.
 */
 class AX25Client {
   public:
     /*!
       \brief Constructor for 2-FSK mode.
-
       \param phy Pointer to the wireless module providing PhysicalLayer communication.
     */
     explicit AX25Client(PhysicalLayer* phy);
 
-    #if !defined(RADIOLIB_EXCLUDE_AFSK)
+    #if !RADIOLIB_EXCLUDE_AFSK
     /*!
       \brief Constructor for AFSK mode.
-
-      \param audio Pointer to the AFSK instance providing audio.
+      \param aud Pointer to the AFSK instance providing audio.
     */
-    explicit AX25Client(AFSKClient* audio);
+    explicit AX25Client(AFSKClient* aud);
 
     /*!
-      \brief Set AFSK tone correction offset. On some platforms, this is required to get the audio produced by the setup to match the expected 1200/2200 Hz tones.
+      \brief Copy constructor.
+      \param ax25 AX25Client instance to copy.
+    */
+    AX25Client(const AX25Client& ax25);
+    
+    /*!
+      \brief Overload for assignment operator.
+      \param ax25 rvalue AX25Client.
+    */
+    AX25Client& operator=(const AX25Client& ax25);
 
+    /*!
+      \brief Set AFSK tone correction offset. On some platforms, this is required to get the audio produced
+      by the setup to match the expected 1200/2200 Hz tones.
       \param mark Positive or negative correction offset for mark audio frequency in Hz.
-
       \param space Positive or negative correction offset for space audio frequency in Hz.
-
+      \param length Audio tone length modifier, defaults to 1.0.
       \returns \ref status_codes
     */
-    int16_t setCorrection(int16_t mark, int16_t space);
+    int16_t setCorrection(int16_t mark, int16_t space, float length = 1.0f);
     #endif
 
     // basic methods
 
     /*!
       \brief Initialization method.
-
       \param srcCallsign Callsign of the source station.
-
-      \param srcSSID 4-bit SSID of the source station (in case there are more stations with the same callsign). Defaults to 0.
-
-      \param preambleLen Number of "preamble" bytes (RADIOLIB_AX25_FLAG) sent ahead of the actual AX.25 frame. Does not include the first RADIOLIB_AX25_FLAG byte, which is considered part of the frame. Defaults to 8.
-
+      \param srcSSID 4-bit SSID of the source station (in case there are more stations with the same callsign).
+      Defaults to 0.
+      \param preLen Number of "preamble" bytes (RADIOLIB_AX25_FLAG) sent ahead of the actual AX.25 frame.
+      Does not include the first RADIOLIB_AX25_FLAG byte, which is considered part of the frame. Defaults to 8.
       \returns \ref status_codes
     */
-    int16_t begin(const char* srcCallsign, uint8_t srcSSID = 0x00, uint8_t preambleLen = 8);
+    int16_t begin(const char* srcCallsign, uint8_t srcSSID = 0x00, uint8_t preLen = 8);
+
+    #if defined(RADIOLIB_BUILD_ARDUINO)
+    /*!
+      \brief Transmit unnumbered information (UI) frame.
+      \param str Data to be sent as Arduino String.
+      \param destCallsign Callsign of the destination station.
+      \param destSSID 4-bit SSID of the destination station (in case there are more stations with the same callsign).
+      Defaults to 0.
+      \returns \ref status_codes
+    */
+    int16_t transmit(String& str, const char* destCallsign, uint8_t destSSID = 0x00);
+    #endif
 
     /*!
       \brief Transmit unnumbered information (UI) frame.
-
       \param str Data to be sent.
-
       \param destCallsign Callsign of the destination station.
-
-      \param destSSID 4-bit SSID of the destination station (in case there are more stations with the same callsign). Defaults to 0.
-
+      \param destSSID 4-bit SSID of the destination station (in case there are more stations with the same callsign).
+      Defaults to 0.
       \returns \ref status_codes
     */
     int16_t transmit(const char* str, const char* destCallsign, uint8_t destSSID = 0x00);
 
     /*!
       \brief Transmit arbitrary AX.25 frame.
-
       \param frame Frame to be sent.
-
       \returns \ref status_codes
     */
     int16_t sendFrame(AX25Frame* frame);
 
-#if !defined(RADIOLIB_GODMODE)
+#if !RADIOLIB_GODMODE
   private:
 #endif
     friend class APRSClient;
 
-    PhysicalLayer* _phy;
-    #if !defined(RADIOLIB_EXCLUDE_AFSK)
-    AFSKClient* _audio;
-    uint32_t _afskMark;
-    uint32_t _afskSpace;
+    PhysicalLayer* phyLayer;
+    #if !RADIOLIB_EXCLUDE_AFSK
+    AFSKClient* audio;
+    BellClient* bellModem;
     #endif
 
-    char _srcCallsign[RADIOLIB_AX25_MAX_CALLSIGN_LEN + 1] = {0, 0, 0, 0, 0, 0, 0};
-    uint8_t _srcSSID = 0;
-    uint16_t _preambleLen = 0;
-
-    static uint16_t getFrameCheckSequence(uint8_t* buff, size_t len);
+    char sourceCallsign[RADIOLIB_AX25_MAX_CALLSIGN_LEN + 1] = { 0 };
+    uint8_t sourceSSID = 0;
+    uint16_t preambleLen = 0;
 
     void getCallsign(char* buff);
     uint8_t getSSID();

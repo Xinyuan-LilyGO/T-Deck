@@ -1,5 +1,5 @@
 #include "SSTV.h"
-#if !defined(RADIOLIB_EXCLUDE_SSTV)
+#if !RADIOLIB_EXCLUDE_SSTV
 
 const SSTVMode_t Scottie1 {
   .visCode = RADIOLIB_SSTV_SCOTTIE_1,
@@ -8,13 +8,13 @@ const SSTVMode_t Scottie1 {
   .scanPixelLen = 432,
   .numTones = 7,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_GREEN, .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 9000, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,    .freq = 0    }
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 9000, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,    .freq = 0    }
   }
 };
 
@@ -25,13 +25,13 @@ const SSTVMode_t Scottie2 {
   .scanPixelLen = 275,
   .numTones = 7,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_GREEN, .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 9000, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,    .freq = 0    }
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 9000, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,    .freq = 0    }
   }
 };
 
@@ -42,13 +42,13 @@ const SSTVMode_t ScottieDX {
   .scanPixelLen = 1080,
   .numTones = 7,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_GREEN, .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 9000, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 1500, .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,    .freq = 0    }
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 9000, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 1500, .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,    .freq = 0    }
   }
 };
 
@@ -59,14 +59,14 @@ const SSTVMode_t Martin1 {
   .scanPixelLen = 458,
   .numTones = 8,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 4862, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 572,  .freq = 1500 },
-    { .type = tone_t::SCAN_GREEN, .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 572,  .freq = 1500 },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 572,  .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 572,  .freq = 1500 }
+    { .type = tone_t::GENERIC,        .len = 4862, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 572,  .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 572,  .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 572,  .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 572,  .freq = 1500 }
   }
 };
 
@@ -77,14 +77,14 @@ const SSTVMode_t Martin2 {
   .scanPixelLen = 229,
   .numTones = 8,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 4862, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 572,  .freq = 1500 },
-    { .type = tone_t::SCAN_GREEN, .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 572,  .freq = 1500 },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 572,  .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 572,  .freq = 1500 }
+    { .type = tone_t::GENERIC,        .len = 4862, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 572,  .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 572,  .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 572,  .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 572,  .freq = 1500 }
   }
 };
 
@@ -95,11 +95,11 @@ const SSTVMode_t Wrasse {
   .scanPixelLen = 734,
   .numTones = 5,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 5523, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 500,  .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,    .freq = 0    },
-    { .type = tone_t::SCAN_GREEN, .len = 0,    .freq = 0    },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,    .freq = 0    }
+    { .type = tone_t::GENERIC,        .len = 5523, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 500,  .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,    .freq = 0    },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,    .freq = 0    },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,    .freq = 0    }
   }
 };
 
@@ -110,13 +110,13 @@ const SSTVMode_t PasokonP3 {
   .scanPixelLen = 208,
   .numTones = 7,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 5208, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 1042, .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 1042, .freq = 1500 },
-    { .type = tone_t::SCAN_GREEN, .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 1042, .freq = 1500 },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,    .freq = 0    }
+    { .type = tone_t::GENERIC,        .len = 5208, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 1042, .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 1042, .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 1042, .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,    .freq = 0    }
   }
 };
 
@@ -127,13 +127,13 @@ const SSTVMode_t PasokonP5 {
   .scanPixelLen = 312,
   .numTones = 7,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 7813, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 1563, .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 1563, .freq = 1500 },
-    { .type = tone_t::SCAN_GREEN, .len = 0,    .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 1563, .freq = 1500 },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,    .freq = 0    }
+    { .type = tone_t::GENERIC,        .len = 7813, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 1563, .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 1563, .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,    .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 1563, .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,    .freq = 0    }
   }
 };
 
@@ -144,67 +144,110 @@ const SSTVMode_t PasokonP7 {
   .scanPixelLen = 417,
   .numTones = 7,
   .tones = {
-    { .type = tone_t::GENERIC,    .len = 10417, .freq = 1200 },
-    { .type = tone_t::GENERIC,    .len = 2083,  .freq = 1500 },
-    { .type = tone_t::SCAN_RED,   .len = 0,     .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 2083,  .freq = 1500 },
-    { .type = tone_t::SCAN_GREEN, .len = 0,     .freq = 0    },
-    { .type = tone_t::GENERIC,    .len = 2083,  .freq = 1500 },
-    { .type = tone_t::SCAN_BLUE,  .len = 0,     .freq = 0    }
+    { .type = tone_t::GENERIC,        .len = 10417, .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 2083,  .freq = 1500 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,     .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 2083,  .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,     .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 2083,  .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,     .freq = 0    }
+  }
+};
+
+const SSTVMode_t Robot36 {
+  .visCode = RADIOLIB_SSTV_ROBOT_36,
+  .width = 320,
+  .height = 240,
+  .scanPixelLen = 275, // this is the Y-scan length, Cb/Cr are one half
+  .numTones = 6,
+  .tones = {
+    { .type = tone_t::GENERIC,        .len = 9000,  .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 3000,  .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,     .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 4500,  .freq = 1500 },
+    { .type = tone_t::GENERIC,        .len = 1500,  .freq = 1900 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,     .freq = 0   }, // on even lines, this is the Cr component
+  }
+};
+
+const SSTVMode_t Robot72 {
+  .visCode = RADIOLIB_SSTV_ROBOT_72,
+  .width = 320,
+  .height = 240,
+  .scanPixelLen = 431, // this is the Y-scan length, Cb/Cr are one half
+  .numTones = 9,
+  .tones = {
+    { .type = tone_t::GENERIC,        .len = 9000,  .freq = 1200 },
+    { .type = tone_t::GENERIC,        .len = 3000,  .freq = 1500 },
+    { .type = tone_t::SCAN_GREEN_Y,   .len = 0,     .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 4500,  .freq = 1500 },
+    { .type = tone_t::GENERIC,        .len = 1500,  .freq = 1900 },
+    { .type = tone_t::SCAN_RED_CR,    .len = 0,     .freq = 0    },
+    { .type = tone_t::GENERIC,        .len = 4500,  .freq = 2300 },
+    { .type = tone_t::GENERIC,        .len = 1500,  .freq = 1500 },
+    { .type = tone_t::SCAN_BLUE_CB,   .len = 0,     .freq = 0    },
   }
 };
 
 SSTVClient::SSTVClient(PhysicalLayer* phy) {
-  _phy = phy;
-  #if !defined(RADIOLIB_EXCLUDE_AFSK)
-  _audio = nullptr;
+  phyLayer = phy;
+  #if !RADIOLIB_EXCLUDE_AFSK
+  audioClient = nullptr;
   #endif
 }
 
-#if !defined(RADIOLIB_EXCLUDE_AFSK)
+#if !RADIOLIB_EXCLUDE_AFSK
 SSTVClient::SSTVClient(AFSKClient* audio) {
-  _phy = audio->_phy;
-  _audio = audio;
+  phyLayer = audio->phyLayer;
+  audioClient = audio;
 }
 #endif
 
-#if !defined(RADIOLIB_EXCLUDE_AFSK)
-int16_t SSTVClient::begin(const SSTVMode_t& mode, float correction) {
-  if(_audio == nullptr) {
+#if !RADIOLIB_EXCLUDE_AFSK
+int16_t SSTVClient::begin(const SSTVMode_t& mode) {
+  if(audioClient == nullptr) {
     // this initialization method can only be used in AFSK mode
     return(RADIOLIB_ERR_WRONG_MODEM);
   }
 
-  return(begin(0, mode, correction));
+  return(begin(0, mode));
 }
 #endif
 
-int16_t SSTVClient::begin(float base, const SSTVMode_t& mode, float correction) {
+int16_t SSTVClient::begin(float base, const SSTVMode_t& mode) {
   // save mode
-  _mode = mode;
-
-  // apply correction factor to all timings
-  _mode.scanPixelLen *= correction;
-  for(uint8_t i = 0; i < _mode.numTones; i++) {
-    _mode.tones[i].len *= correction;
-  }
+  txMode = mode;
 
   // calculate 24-bit frequency
-  _base = (base * 1000000.0) / _phy->getFreqStep();
+  baseFreq = (base * 1000000.0) / phyLayer->getFreqStep();
 
   // configure for direct mode
-  return(_phy->startDirect());
+  return(phyLayer->startDirect());
+}
+
+int16_t SSTVClient::setCorrection(float correction) {
+  // check if mode is initialized
+  if(txMode.visCode == 0) {
+    return(RADIOLIB_ERR_WRONG_MODEM);
+  }
+
+  // apply correction factor to all timings
+  txMode.scanPixelLen *= correction;
+  for(uint8_t i = 0; i < txMode.numTones; i++) {
+    txMode.tones[i].len *= correction;
+  }
+  return(RADIOLIB_ERR_NONE);
 }
 
 void SSTVClient::idle() {
-  _phy->transmitDirect();
+  phyLayer->transmitDirect();
   this->tone(RADIOLIB_SSTV_TONE_LEADER);
 }
 
 void SSTVClient::sendHeader() {
-  // save first header flag for Scottie modes
-  _firstLine = true;
-  _phy->transmitDirect();
+  // reset line counter
+  lineCount = 0;
+  phyLayer->transmitDirect();
 
   // send the first part of header (leader-break-leader)
   this->tone(RADIOLIB_SSTV_TONE_LEADER, RADIOLIB_SSTV_HEADER_LEADER_LENGTH);
@@ -217,7 +260,7 @@ void SSTVClient::sendHeader() {
   // VIS code
   uint8_t parityCount = 0;
   for(uint8_t mask = 0x01; mask < 0x80; mask <<= 1) {
-    if(_mode.visCode & mask) {
+    if(txMode.visCode & mask) {
       this->tone(RADIOLIB_SSTV_TONE_VIS_1, RADIOLIB_SSTV_HEADER_BIT_LENGTH);
       parityCount++;
     } else {
@@ -238,64 +281,96 @@ void SSTVClient::sendHeader() {
   this->tone(RADIOLIB_SSTV_TONE_BREAK, RADIOLIB_SSTV_HEADER_BIT_LENGTH);
 }
 
-void SSTVClient::sendLine(uint32_t* imgLine) {
-  // check first line flag in Scottie modes
-  if(_firstLine && ((_mode.visCode == RADIOLIB_SSTV_SCOTTIE_1) || (_mode.visCode == RADIOLIB_SSTV_SCOTTIE_2) || (_mode.visCode == RADIOLIB_SSTV_SCOTTIE_DX))) {
-    _firstLine = false;
-
+void SSTVClient::sendLine(const uint32_t* imgLine) {
+  // check first line in Scottie modes
+  if((lineCount == 0) && ((txMode.visCode == RADIOLIB_SSTV_SCOTTIE_1) || (txMode.visCode == RADIOLIB_SSTV_SCOTTIE_2) || (txMode.visCode == RADIOLIB_SSTV_SCOTTIE_DX))) {
     // send start sync tone
     this->tone(RADIOLIB_SSTV_TONE_BREAK, 9000);
   }
 
   // send all tones in sequence
-  for(uint8_t i = 0; i < _mode.numTones; i++) {
-    if((_mode.tones[i].type == tone_t::GENERIC) && (_mode.tones[i].len > 0)) {
+  for(uint8_t i = 0; i < txMode.numTones; i++) {
+    if((txMode.tones[i].type == tone_t::GENERIC) && (txMode.tones[i].len > 0)) {
+      // Robot36 has different separator tones for even and odd lines
+      uint32_t freq = txMode.tones[i].freq;
+      if((txMode.visCode == RADIOLIB_SSTV_ROBOT_36) && (i == 3)) {
+        freq = (lineCount % 2) ? 2300 : txMode.tones[3].freq;
+      }
+
       // sync/porch tones
-      this->tone(_mode.tones[i].freq, _mode.tones[i].len);
+      this->tone(freq, txMode.tones[i].len);
+
     } else {
       // scan lines
-      for(uint16_t j = 0; j < _mode.width; j++) {
+      for(uint16_t j = 0; j < txMode.width; j++) {
         uint32_t color = imgLine[j];
-        switch(_mode.tones[i].type) {
-          case(tone_t::SCAN_RED):
+        uint32_t len = txMode.scanPixelLen;
+
+        // Robot modes work in YCbCr
+        if((txMode.visCode == RADIOLIB_SSTV_ROBOT_36) || (txMode.visCode == RADIOLIB_SSTV_ROBOT_72)) {
+          uint8_t r = (color & 0x00FF0000) >> 16;
+          uint8_t g = (color & 0x0000FF00) >> 8;
+          uint8_t b = (color & 0x000000FF);
+          uint8_t y = 16.0 + (0.003906 * ((65.738 * r) + (129.057 * g) + (25.064 * b)));
+          uint8_t cb = 128.0 + (0.003906 * ((-37.945 * r) + (-74.494 * g) + (112.439 * b)));
+          uint8_t cr = 128.0 + (0.003906 * ((112.439 * r) + (-94.154 * g) + (-18.285 * b)));
+          color = ((uint32_t)y << 8);
+          if(txMode.visCode == RADIOLIB_SSTV_ROBOT_36) {
+            // odd lines carry Cb, even lines carry Cr
+            color |= (lineCount % 2) ? cb : cr; 
+          } else {
+            color |= ((uint32_t)cr << 16) | cb;
+          }
+          
+        }
+
+        switch(txMode.tones[i].type) {
+          case(tone_t::SCAN_RED_CR):
             color &= 0x00FF0000;
             color >>= 16;
+            if((txMode.visCode == RADIOLIB_SSTV_ROBOT_36) || (txMode.visCode == RADIOLIB_SSTV_ROBOT_72)) {
+              len /= 2;
+            }
             break;
-          case(tone_t::SCAN_GREEN):
+          case(tone_t::SCAN_GREEN_Y):
             color &= 0x0000FF00;
             color >>= 8;
             break;
-          case(tone_t::SCAN_BLUE):
+          case(tone_t::SCAN_BLUE_CB):
             color &= 0x000000FF;
+            if((txMode.visCode == RADIOLIB_SSTV_ROBOT_36) || (txMode.visCode == RADIOLIB_SSTV_ROBOT_72)) {
+              len /= 2;
+            }
             break;
           case(tone_t::GENERIC):
             break;
         }
-        this->tone(RADIOLIB_SSTV_TONE_BRIGHTNESS_MIN + ((float)color * 3.1372549), _mode.scanPixelLen);
+        this->tone(RADIOLIB_SSTV_TONE_BRIGHTNESS_MIN + ((float)color * 3.1372549), len);
       }
     }
   }
+
+  // increment line counter (needed for Robot36 mode)
+  lineCount++;
 }
 
 uint16_t SSTVClient::getPictureHeight() const {
-  return(_mode.height);
+  return(txMode.height);
 }
 
-void SSTVClient::tone(float freq, uint32_t len) {
-  Module* mod = _phy->getMod();
-  uint32_t start = mod->micros();
-  #if !defined(RADIOLIB_EXCLUDE_AFSK)
-  if(_audio != nullptr) {
-    _audio->tone(freq, false);
+void SSTVClient::tone(float freq, RadioLibTime_t len) {
+  Module* mod = phyLayer->getMod();
+  RadioLibTime_t start = mod->hal->micros();
+  #if !RADIOLIB_EXCLUDE_AFSK
+  if(audioClient != nullptr) {
+    audioClient->tone(freq, false);
   } else {
-    _phy->transmitDirect(_base + (freq / _phy->getFreqStep()));
+    phyLayer->transmitDirect(baseFreq + (freq / phyLayer->getFreqStep()));
   }
   #else
-  _phy->transmitDirect(_base + (freq / _phy->getFreqStep()));
+  phyLayer->transmitDirect(baseFreq + (freq / phyLayer->getFreqStep()));
   #endif
-  while(mod->micros() - start < len) {
-    mod->yield();
-  }
+  mod->waitForMicroseconds(start, len);
 }
 
 #endif

@@ -35,9 +35,6 @@ int transmissionState = RADIOLIB_ERR_NONE;
 // flag to indicate transmission or reception state
 bool transmitFlag = false;
 
-// disable interrupt when it's not needed
-volatile bool enableInterrupt = true;
-
 // flag to indicate that a packet was sent or received
 volatile bool operationDone = false;
 
@@ -45,13 +42,11 @@ volatile bool operationDone = false;
 // is transmitted or received by the module
 // IMPORTANT: this function MUST be 'void' type
 //            and MUST NOT have any arguments!
+#if defined(ESP8266) || defined(ESP32)
+  ICACHE_RAM_ATTR
+#endif
 void setFlag(void) {
-  // check if the interrupt is enabled
-  if(!enableInterrupt) {
-    return;
-  }
-
-  // we sent aor received  packet, set the flag
+  // we sent or received a packet, set the flag
   operationDone = true;
 }
 
@@ -66,7 +61,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while (true);
+    while (true) { delay(10); }
   }
 
   // set the function that will be called
@@ -87,7 +82,7 @@ void setup() {
     } else {
       Serial.print(F("failed, code "));
       Serial.println(state);
-      while (true);
+      while (true) { delay(10); }
     }
   #endif
 }
@@ -95,10 +90,6 @@ void setup() {
 void loop() {
   // check if the previous operation finished
   if(operationDone) {
-    // disable the interrupt service routine while
-    // processing the data
-    enableInterrupt = false;
-
     // reset flag
     operationDone = false;
 
@@ -153,10 +144,6 @@ void loop() {
       transmissionState = radio.startTransmit("Hello World!");
       transmitFlag = true;
     }
-
-    // we're ready to process more packets,
-    // enable interrupt service routine
-    enableInterrupt = true;
-
+  
   }
 }

@@ -5,6 +5,9 @@
 *.tags
 *.tags1
 
+# VS Code
+.vscode
+
 # Jetbrain IDEs
 .idea
 
@@ -12,5 +15,14 @@
 extras/decoder/log.txt
 extras/decoder/out.txt
 
+# Spectrum scan
+extras/SX126x_Spectrum_Scan/out/*
+
 # PlatformIO
 .pio*
+
+# cmake
+build/
+
+# Compote build output
+dist

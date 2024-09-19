@@ -12,6 +12,7 @@
     - SX126x
     - nRF24
     - Si443x/RFM2x
+    - LR11x0
 
    Using raw AX.25 frames requires some
    knowledge of the protocol, refer to
@@ -63,7 +64,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while(true);
+    while (true) { delay(10); }
   }
 
   // initialize AX.25 client
@@ -77,7 +78,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while(true);
+    while (true) { delay(10); }
   }
 }
 

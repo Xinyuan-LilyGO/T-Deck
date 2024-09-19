@@ -1,54 +1,84 @@
 #include "APRS.h"
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>
+#if !RADIOLIB_EXCLUDE_APRS
 
 APRSClient::APRSClient(AX25Client* ax) {
-  _ax = ax;
+  axClient = ax;
+  phyLayer = nullptr;
 }
 
-int16_t APRSClient::begin(char symbol, bool alt) {
-  RADIOLIB_CHECK_RANGE(symbol, ' ', '}', RADIOLIB_ERR_INVALID_SYMBOL);
-  _symbol = symbol;
+APRSClient::APRSClient(PhysicalLayer* phy) {
+  axClient = nullptr;
+  phyLayer = phy;
+}
+
+int16_t APRSClient::begin(char sym, char* callsign, uint8_t ssid, bool alt) {
+  RADIOLIB_CHECK_RANGE(sym, ' ', '}', RADIOLIB_ERR_INVALID_SYMBOL);
+  symbol = sym;
 
   if(alt) {
-    _table = '\\';
+    table = '\\';
   } else {
-    _table = '/';
+    table = '/';
   }
+
+  // callsign is only processed for LoRa APRS
+  if(!callsign) {
+    return(RADIOLIB_ERR_NONE);
+  }
+
+  if(strlen(callsign) > RADIOLIB_AX25_MAX_CALLSIGN_LEN) {
+    return(RADIOLIB_ERR_INVALID_CALLSIGN);
+  }
+  
+  memcpy(this->src, callsign, strlen(callsign));
+  this->id = ssid;
 
   return(RADIOLIB_ERR_NONE);
 }
 
 int16_t APRSClient::sendPosition(char* destCallsign, uint8_t destSSID, char* lat, char* lon, char* msg, char* time) {
-  #if !defined(RADIOLIB_STATIC_ONLY)
-    size_t len = 1 + strlen(lat) + 1 + strlen(lon);
-    if(msg != NULL) {
-      len += 1 + strlen(msg);
-    }
-    if(time != NULL) {
-      len += strlen(time);
-    }
-    char* info = new char[len];
+  size_t len = 1 + strlen(lat) + 1 + strlen(lon);
+  if(msg != NULL) {
+    len += 1 + strlen(msg);
+  }
+  if(time != NULL) {
+    len += strlen(time);
+  }
+  #if !RADIOLIB_STATIC_ONLY
+    char* info = new char[len + 2];
   #else
     char info[RADIOLIB_STATIC_ARRAY_SIZE];
   #endif
 
   // build the info field
-  if((msg == NULL) && (time == NULL)) {
-    // no message, no timestamp
-    sprintf(info, RADIOLIB_APRS_DATA_TYPE_POSITION_NO_TIME_NO_MSG "%s%c%s%c", lat, _table, lon, _symbol);
-  } else if((msg != NULL) && (time == NULL)) {
-    // message, no timestamp
-    sprintf(info, RADIOLIB_APRS_DATA_TYPE_POSITION_NO_TIME_MSG "%s%c%s%c%s", lat, _table, lon, _symbol, msg);
-  } else if((msg == NULL) && (time != NULL)) {
-    // timestamp, no message
-    sprintf(info, RADIOLIB_APRS_DATA_TYPE_POSITION_TIME_NO_MSG "%s%s%c%s%c", time, lat, _table, lon, _symbol);
+  if(msg != NULL) {
+    if(time != NULL) {
+      // timestamp and message
+      sprintf(info, RADIOLIB_APRS_DATA_TYPE_POSITION_TIME_MSG "%s%s%c%s%c%s", time, lat, table, lon, symbol, msg);
+    } else {
+      // message, no timestamp
+      sprintf(info, RADIOLIB_APRS_DATA_TYPE_POSITION_NO_TIME_MSG "%s%c%s%c%s", lat, table, lon, symbol, msg);
+    }
+  
   } else {
-    // timestamp and message
-    sprintf(info, RADIOLIB_APRS_DATA_TYPE_POSITION_TIME_MSG "%s%s%c%s%c%s", time, lat, _table, lon, _symbol, msg);
+    if(time != NULL) {
+      // timestamp, no message
+      sprintf(info, RADIOLIB_APRS_DATA_TYPE_POSITION_TIME_NO_MSG "%s%s%c%s%c", time, lat, table, lon, symbol);
+    } else {
+      // no message, no timestamp
+      sprintf(info, RADIOLIB_APRS_DATA_TYPE_POSITION_NO_TIME_NO_MSG "%s%c%s%c", lat, table, lon, symbol);
+    }
+
   }
 
   // send the frame
+  info[len] = '\0';
+  RADIOLIB_DEBUG_PROTOCOL_PRINTLN("APRS Info: %s, length = %d", info, (int)len);
   int16_t state = sendFrame(destCallsign, destSSID, info);
-  #if !defined(RADIOLIB_STATIC_ONLY)
+  #if !RADIOLIB_STATIC_ONLY
     delete[] info;
   #endif
   return(state);
@@ -71,7 +101,7 @@ int16_t APRSClient::sendMicE(float lat, float lon, uint16_t heading, uint16_t sp
 
   // prepare buffers
   char destCallsign[7];
-  #if !defined(RADIOLIB_STATIC_ONLY)
+  #if !RADIOLIB_STATIC_ONLY
     size_t infoLen = 10;
     if(telemLen > 0) {
       infoLen += 1 + telemLen;
@@ -96,7 +126,7 @@ int16_t APRSClient::sendMicE(float lat, float lon, uint16_t heading, uint16_t sp
   // as discussed in https://github.com/jgromes/RadioLib/issues/430
 
   // latitude first, because that is in the destination field
-  float lat_abs = abs(lat);
+  float lat_abs = RADIOLIB_ABS(lat);
   int lat_deg = (int)lat_abs;
   int lat_min = (lat_abs - (float)lat_deg) * 60.0f;
   int lat_hun = (((lat_abs - (float)lat_deg) * 60.0f) - lat_min) * 100.0f;
@@ -129,7 +159,7 @@ int16_t APRSClient::sendMicE(float lat, float lon, uint16_t heading, uint16_t sp
   info[infoPos++] = RADIOLIB_APRS_MIC_E_GPS_DATA_CURRENT;
 
   // encode the longtitude
-  float lon_abs = abs(lon);
+  float lon_abs = RADIOLIB_ABS(lon);
   int32_t lon_deg = (int32_t)lon_abs;
   int32_t lon_min = (lon_abs - (float)lon_deg) * 60.0f;
   int32_t lon_hun = (((lon_abs - (float)lon_deg) * 60.0f) - lon_min) * 100.0f;
@@ -166,8 +196,8 @@ int16_t APRSClient::sendMicE(float lat, float lon, uint16_t heading, uint16_t sp
 
   info[infoPos++] = speed_uni*10 + head_hun + 32;
   info[infoPos++] = head_ten_uni + 28;
-  info[infoPos++] = _symbol;
-  info[infoPos++] = _table;
+  info[infoPos++] = symbol;
+  info[infoPos++] = table;
 
   // onto the optional stuff - check telemetry first
   if(telemLen > 0) {
@@ -207,21 +237,43 @@ int16_t APRSClient::sendMicE(float lat, float lon, uint16_t heading, uint16_t sp
   info[infoPos++] = '\0';
 
   // send the frame
-  int16_t state = sendFrame(destCallsign, 0, info);
-  #if !defined(RADIOLIB_STATIC_ONLY)
+  uint8_t destSSID = 0;
+  if(this->phyLayer != nullptr) {
+    // TODO make SSID configurable?
+    destSSID = 1;
+  }
+  int16_t state = sendFrame(destCallsign, destSSID, info);
+  #if !RADIOLIB_STATIC_ONLY
     delete[] info;
   #endif
   return(state);
 }
 
 int16_t APRSClient::sendFrame(char* destCallsign, uint8_t destSSID, char* info) {
-  // get AX.25 callsign
-  char srcCallsign[RADIOLIB_AX25_MAX_CALLSIGN_LEN + 1];
-  _ax->getCallsign(srcCallsign);
+  // encoding depends on whether AX.25 should be used or not
+  if(this->axClient != nullptr) {
+    // AX.25/classical mode, get AX.25 callsign
+    char srcCallsign[RADIOLIB_AX25_MAX_CALLSIGN_LEN + 1];
+    axClient->getCallsign(srcCallsign);
 
-  AX25Frame frameUI(destCallsign, destSSID, srcCallsign, _ax->getSSID(), RADIOLIB_AX25_CONTROL_U_UNNUMBERED_INFORMATION |
-                    RADIOLIB_AX25_CONTROL_POLL_FINAL_DISABLED | RADIOLIB_AX25_CONTROL_UNNUMBERED_FRAME,
-                    RADIOLIB_AX25_PID_NO_LAYER_3, (const char*)info);
+    AX25Frame frameUI(destCallsign, destSSID, srcCallsign, axClient->getSSID(),
+                      RADIOLIB_AX25_CONTROL_UNNUMBERED_FRAME,
+                      RADIOLIB_AX25_PID_NO_LAYER_3, const_cast<char*>(info));
 
-  return(_ax->sendFrame(&frameUI));
+    return(axClient->sendFrame(&frameUI));
+  
+  } else if(this->phyLayer != nullptr) {
+    // non-AX.25/LoRa mode
+    size_t len = RADIOLIB_APRS_LORA_HEADER_LEN + strlen(this->src) + 4 + strlen(destCallsign) + 11 + strlen(info);
+    char* buff = new char[len];
+    snprintf(buff, len, RADIOLIB_APRS_LORA_HEADER "%s-%d>%s,WIDE%d-%d:%s", this->src, this->id, destCallsign, destSSID, destSSID, info);
+
+    int16_t res = this->phyLayer->transmit(reinterpret_cast<uint8_t*>(buff), strlen(buff));
+    delete[] buff;
+    return(res);
+  } 
+  
+  return(RADIOLIB_ERR_WRONG_MODEM);
 }
+
+#endif

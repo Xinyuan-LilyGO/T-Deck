@@ -12,6 +12,7 @@
     - SX126x
     - nRF24
     - Si443x/RFM2x
+    - LR11x0
 
    For default module settings, see the wiki page
    https://github.com/jgromes/RadioLib/wiki/Default-configuration
@@ -55,7 +56,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while(true);
+    while (true) { delay(10); }
   }
 
   // initialize AX.25 client
@@ -69,7 +70,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while(true);
+    while (true) { delay(10); }
   }
 }
 

@@ -44,12 +44,12 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while (true);
+    while (true) { delay(10); }
   }
 
   // set the function that will be called
   // when new packet is received
-  radio.setGdo0Action(setFlag);
+  radio.setPacketReceivedAction(setFlag);
 
   // start listening for packets
   Serial.print(F("[CC1101] Starting to listen ... "));
@@ -59,7 +59,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while (true);
+    while (true) { delay(10); }
   }
 
   // if needed, 'listen' mode can be disabled by calling
@@ -75,9 +75,6 @@ void setup() {
 // flag to indicate that a packet was received
 volatile bool receivedFlag = false;
 
-// disable interrupt when it's not needed
-volatile bool enableInterrupt = true;
-
 // this function is called when a complete packet
 // is received by the module
 // IMPORTANT: this function MUST be 'void' type
@@ -86,11 +83,6 @@ volatile bool enableInterrupt = true;
   ICACHE_RAM_ATTR
 #endif
 void setFlag(void) {
-  // check if the interrupt is enabled
-  if(!enableInterrupt) {
-    return;
-  }
-
   // we got a packet, set the flag
   receivedFlag = true;
 }
@@ -98,10 +90,6 @@ void setFlag(void) {
 void loop() {
   // check if the flag is set
   if(receivedFlag) {
-    // disable the interrupt service routine while
-    // processing the data
-    enableInterrupt = false;
-
     // reset flag
     receivedFlag = false;
 
@@ -112,7 +100,8 @@ void loop() {
     // you can also read received data as byte array
     /*
       byte byteArr[8];
-      int state = radio.readData(byteArr, 8);
+      int numBytes = radio.getPacketLength();
+      int state = radio.readData(byteArr, numBytes);
     */
 
     if (state == RADIOLIB_ERR_NONE) {
@@ -147,10 +136,6 @@ void loop() {
 
     // put module back to listen mode
     radio.startReceive();
-
-    // we're ready to receive more packets,
-    // enable interrupt service routine
-    enableInterrupt = true;
   }
 
 }

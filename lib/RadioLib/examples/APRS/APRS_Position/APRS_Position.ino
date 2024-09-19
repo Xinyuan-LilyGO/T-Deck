@@ -16,6 +16,7 @@
     - CC1101
     - nRF24
     - Si443x/RFM2x
+    - SX126x/LLCC68
 
    For default module settings, see the wiki page
    https://github.com/jgromes/RadioLib/wiki/Default-configuration
@@ -39,13 +40,20 @@ SX1278 radio = new Module(10, 2, 9, 3);
 //SX1278 radio = RadioShield.ModuleA;
 
 // create AFSK client instance using the FSK module
-// pin 5 is connected to SX1278 DIO2
+// this requires connection to the module direct
+// input pin, here connected to Arduino pin 5
+// SX127x/RFM9x:  DIO2
+// RF69:          DIO2
+// SX1231:        DIO2
+// CC1101:        GDO2
+// Si443x/RFM2x:  GPIO
+// SX126x/LLCC68: DIO2
 AFSKClient audio(&radio, 5);
 
 // create AX.25 client instance using the AFSK instance
 AX25Client ax25(&audio);
 
-// create APRS client isntance using the AX.25 client
+// create APRS client instance using the AX.25 client
 APRSClient aprs(&ax25);
 
 void setup() {
@@ -66,7 +74,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while(true);
+    while (true) { delay(10); }
   }
 
   // initialize AX.25 client
@@ -80,7 +88,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while(true);
+    while (true) { delay(10); }
   }
 
   // initialize APRS client
@@ -92,7 +100,7 @@ void setup() {
   } else {
     Serial.print(F("failed, code "));
     Serial.println(state);
-    while(true);
+    while (true) { delay(10); }
   }
 }
 
@@ -100,15 +108,20 @@ void loop() {
   Serial.print(F("[APRS] Sending position ... "));
   
   // send a location without message or timestamp
-  int state = aprs.sendPosition("N0CALL", 0, "4911.67N", "01635.96E");
+  char destination[] = "N0CALL";
+  char latitude[] = "4911.67N";
+  char longitude[] = "01635.96E";
+  int state = aprs.sendPosition(destination, 0, latitude, longitude);
   delay(500);
   
   // send a location with message and without timestamp
-  state |= aprs.sendPosition("N0CALL", 0, "4911.67N", "01635.96E", "I'm here!");
+  char message[] = "I'm here!";
+  state |= aprs.sendPosition(destination, 0, latitude, longitude, message);
   delay(500);
   
   // send a location with message and timestamp
-  state |= aprs.sendPosition("N0CALL", 0, "4911.67N", "01635.96E", "I'm here!", "093045z");
+  char timestamp[] = "093045z";
+  state |= aprs.sendPosition(destination, 0, latitude, longitude, message, timestamp);
   delay(500);
 
   if(state == RADIOLIB_ERR_NONE) {

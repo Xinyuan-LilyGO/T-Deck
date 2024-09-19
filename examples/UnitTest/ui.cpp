@@ -13,6 +13,8 @@
 #include "lvgl.h"
 #include "utilities.h"
 #include <vector>
+#include "config.h"
+
 
 typedef struct {
     lv_obj_t *label_lat;

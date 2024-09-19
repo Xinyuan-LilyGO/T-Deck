@@ -10,13 +10,14 @@
 ## 1️⃣ Examples preview
 
 ````
-
 examples 
 ├─Keyboard_ESP32C3       # ESP32C3 keyboard I2C slave
 ├─Keyboard_T_Deck_Master # T-Deck read from keyboard
+├─LoRaWAN_Starter        # LoRaWAN example
 ├─Microphone             # Noise detection  
 ├─Touchpad               # Read touch coordinates 
 ├─GPSShield              # GPS Shield example
+├─lvgl_example           # lvgl example
 └─UnitTest               # Factory hardware unit testing           
 
 ````

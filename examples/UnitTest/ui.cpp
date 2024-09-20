@@ -332,6 +332,16 @@ void setupUI(void)
     lv_textarea_set_max_length(radio_ta, 1024);
     sub_section.push_back(radio_ta);
 
+
+    lv_timer_create([](lv_timer_t *t) {
+        extern lv_indev_t  *kb_indev ;
+        if (NULL == kb_indev) {
+            lv_obj_t *radio_ta = (lv_obj_t *)t->user_data;
+            lv_textarea_set_text(radio_ta, "Keyboard is offline");
+            lv_obj_invalidate(radio_ta);
+        }
+    }, 3000, radio_ta);
+
     //! SD
     // lv_obj_t *sub_sd_page = lv_menu_page_create(menu, NULL);
     // lv_obj_set_style_pad_hor(sub_sd_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);

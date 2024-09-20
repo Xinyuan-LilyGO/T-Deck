@@ -1008,10 +1008,17 @@ void setup()
     setupWiFi();
 
     if (!setupGPS()) {
-        // set ubox m10q gps baudrate 38400
         SerialGPS.begin(38400, SERIAL_8N1, BOARD_GPS_RX_PIN, BOARD_GPS_TX_PIN);
+        uint32_t baudrate[] = {38400, 115200, 9600};
         // Restore factory settings
-        GPS_Recovery();
+        for (int i = 0; i < 3; ++i) {
+            Serial.printf("Use baudrate : %u\n", baudrate[i]);
+            if (GPS_Recovery()) {
+                break;
+            }
+            Serial.printf("Update baudrate : %u\n", baudrate[i]);
+            SerialGPS.updateBaudRate(baudrate[i]);
+        }
     }
 
 
@@ -1150,10 +1157,23 @@ static void touchpad_read( lv_indev_drv_t *indev_driver, lv_indev_data_t *data )
 // Read key value from esp32c3
 static uint32_t keypad_get_key(void)
 {
+    static uint32_t retry = 0;
     char key_ch = 0;
+    if (retry > 10) {
+        lv_indev_delete(kb_indev);
+        kb_indev = NULL;
+        return 0;
+    }
+    Wire.beginTransmission(0x55);
+    if (Wire.endTransmission() != 0) {
+        Serial.println("Keyboard Failed!");
+        retry++;
+        return 0;
+    }
     Wire.requestFrom(0x55, 1);
     while (Wire.available() > 0) {
         key_ch = Wire.read();
+        retry = 0;
     }
     return key_ch;
 }

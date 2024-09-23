@@ -5,8 +5,8 @@
 #define WIFI_SSID             "You WIFI SSID"
 #endif
 
-#ifndef WIFI_PASSWORD
-#define WIFI_PASSWORD         "You WIFI PASSWORD"
+#ifndef WIFI_PASS
+#define WIFI_PASS         "You WIFI PASSWORD"
 #endif
 
 #define NTP_SERVER1           "pool.ntp.org"

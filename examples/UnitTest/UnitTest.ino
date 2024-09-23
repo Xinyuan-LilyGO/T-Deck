@@ -273,7 +273,7 @@ void setupWiFi()
 }
 
 // LilyGo  T-Deck  control backlight chip has 16 levels of adjustment range
-// The adjustable range is 0~15, 0 is the minimum brightness, 15 is the maximum brightness
+// The adjustable range is 0~16, 0 is the minimum brightness, 16 is the maximum brightness
 void setBrightness(uint8_t value)
 {
     static uint8_t level = 0;

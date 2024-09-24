@@ -36,6 +36,9 @@ examples
 8. Click (→) to upload firmware
 9. Click (plug symbol) to monitor serial output
 
+Optional:
+
+You can upload the assets contents for the speaker demo, using the "Upload Filesystem Image" on PlatformIO menu.
 
 ### ArduinoIDE
 

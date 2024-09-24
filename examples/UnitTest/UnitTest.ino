@@ -264,7 +264,7 @@ static void wifi_event_cb(WiFiEvent_t event)
 void setupWiFi()
 {
     WiFi.onEvent(wifi_event_cb);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
 
     configTzTime(DEFAULT_TIMEZONE, NTP_SERVER1, NTP_SERVER2);
     // set notification call-back function

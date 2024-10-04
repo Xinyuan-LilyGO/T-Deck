@@ -45,7 +45,7 @@
 
 #include <TinyGPS++.h>
 TinyGPSPlus gps;
-
+String gps_model = "None";
 
 #define MIC_I2S_SAMPLE_RATE         16000
 #define MIC_I2S_PORT                I2S_NUM_1
@@ -199,6 +199,7 @@ bool setupGPS()
         ver = SerialGPS.readStringUntil('\n');
         if (ver.startsWith("$GPTXT,01,01,02")) {
             Serial.println("L76K GNSS init succeeded, using L76K GNSS Module\n");
+            gps_model = "L76K";
             result = true;
             break;
         }
@@ -1014,6 +1015,8 @@ void setup()
         for (int i = 0; i < 3; ++i) {
             Serial.printf("Use baudrate : %u\n", baudrate[i]);
             if (GPS_Recovery()) {
+                Serial.println("UBlox-M10Q GNSS init succeeded, using UBlox-M10Q GNSS Module\n");
+                gps_model = "UBlox-M10";
                 break;
             }
             Serial.printf("Update baudrate : %u\n", baudrate[i]);

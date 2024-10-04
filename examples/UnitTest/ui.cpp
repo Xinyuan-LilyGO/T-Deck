@@ -70,6 +70,7 @@ extern void setTxPower(int16_t dBm);
 extern void setSenderInterval(uint32_t interval_ms);
 extern bool        enterSleep;
 
+extern String gps_model;
 
 
 void lv_brightness_cb(lv_event_t *e)
@@ -310,6 +311,7 @@ void setupUI(void)
     section = lv_menu_section_create(sub_gps_page);
     sub_section.push_back(section);
 
+    create_label(section, LV_SYMBOL_GPS, "Model", gps_model.c_str());
     sub_gps_val.label_lat = create_label(section, LV_SYMBOL_GPS, "lat", "N.A");
     sub_gps_val.label_lng = create_label(section, LV_SYMBOL_GPS, "lng", "N.A");
     sub_gps_val.label_speed = create_label(section, LV_SYMBOL_SETTINGS, "Speed", "N.A");

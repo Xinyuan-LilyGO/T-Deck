@@ -889,9 +889,6 @@ void setup()
     if (touchDetected) {
         Serial.println("Init GT911 Sensor success!");
 
-        // Keep high level when idle, and switch to low level when touched
-        touch.setInterruptMode(LOW_LEVEL_QUERY);
-
         // Set touch max xy
         touch.setMaxCoordinates(320, 240);
 

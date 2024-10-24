@@ -7,8 +7,8 @@
 | Firmware Name                                              | description                               |
 | ---------------------------------------------------------- | ----------------------------------------- |
 | [firmware-c3-t-keyboard.bin](./firmware-c3-t-keyboard.bin) | [T-Deck Keyboard C3 firmware][1]          |
-| [T-Deck_UnitTest_241004.bin](./T-Deck_UnitTest_241004.bin) | [T-Deck/T-Deck-Plus function firmware][1] |
-| [firmware-c3-t-keyboard.bin](./firmware-c3-t-keyboard.bin) | [T-Deck/T-Deck-Plus factory firmware][2]  |
+| [T-Deck_UnitTest_241004.bin](./T-Deck_UnitTest_241004.bin) | [T-Deck/T-Deck-Plus function test firmware][1] |
+| [firmware.meshtastic.factory.v2.5.8-pset-gps.bin](./firmware.meshtastic.factory.v2.5.8-pset-gps.bin) | [T-Deck/T-Deck-Plus factory firmware][2]  |
 
 [1]: https://www.lilygo.cc/products/t-deck
 [2]: https://www.lilygo.cc/products/t-deck

@@ -2,4 +2,7 @@
 .vscode
 build
 script
+test
+SX126x_Transmit
+config
 

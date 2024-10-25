@@ -4,11 +4,21 @@
 
 # 1️⃣ Quickly diagnose hardware
 
-| Firmware Name                                              | description                               |
-| ---------------------------------------------------------- | ----------------------------------------- |
-| [firmware-c3-t-keyboard.bin](./firmware-c3-t-keyboard.bin) | [T-Deck Keyboard C3 firmware][1]          |
-| [T-Deck_UnitTest_241004.bin](./T-Deck_UnitTest_241004.bin) | [T-Deck/T-Deck-Plus function test firmware][1] |
-| [firmware.meshtastic.factory.v2.5.8-pset-gps.bin](./firmware.meshtastic.factory.v2.5.8-pset-gps.bin) | [T-Deck/T-Deck-Plus factory firmware][2]  |
+| Firmware Name                                                                                        | description                                    |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [firmware-c3-t-keyboard.bin](./firmware-c3-t-keyboard.bin)                                           | [T-Deck Keyboard C3 firmware][1]               |
+| [T-Deck_UnitTest_241004.bin](./T-Deck_UnitTest_241004.bin)                                           | [T-Deck/T-Deck-Plus function test firmware][1] |
+| [firmware.meshtastic.factory.v2.5.8-pset-gps.bin](./firmware.meshtastic.factory.v2.5.8-pset-gps.bin) | [T-Deck/T-Deck-Plus factory firmware][2]       |
+| [T-Deck-Plus-TouchFix_241025.bin](./T-Deck-Plus-TouchFix_241025.bin)                                 | [T-Deck-Plus Touch Fix][2]                     |
+
+⚠⚠⚠
+
+**T-Deck-Plus-TouchFix_241025.bin** Touch repair program, can only be flashed on rounded corner screens, please do not flash this on T-Deck rectangular screens, otherwise the screen touch will fail
+
+**T-Deck-Plus-TouchFix_241025.bin** Touch repair program, can only be flashed on rounded corner screens, please do not flash this on T-Deck rectangular screens, otherwise the screen touch will fail
+
+**T-Deck-Plus-TouchFix_241025.bin** Touch repair program, can only be flashed on rounded corner screens, please do not flash this on T-Deck rectangular screens, otherwise the screen touch will fail
+
 
 [1]: https://www.lilygo.cc/products/t-deck
 [2]: https://www.lilygo.cc/products/t-deck

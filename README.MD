@@ -66,6 +66,7 @@ You can upload the assets contents for the speaker demo, using the "Upload Files
    4. Release the RST button
    5. Release the BOOT button
    6. Upload sketch
+   7. If you still cannot upload the sketch successfully according to the above method, please check whether the resistor in this [issue62](https://github.com/Xinyuan-LilyGO/T-Deck/issues/62) exists. Please remove it and test again.
 
 ## 4️⃣ Where to buy:
 

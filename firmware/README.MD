@@ -1,6 +1,9 @@
 # Write to new users
 
 - This page provides a quick diagnosis of whether the hardware is normal. The firmware in the example table below provides quick testing of the hardware. Please follow the steps below to test
+- [T-Deck Plus Touch Fix Record](https://youtu.be/CTdMXJvWZpA)
+- [How to write firmware to T-Deck or T-Deck-Plus Record](https://www.youtube.com/watch?v=aSjUyzw_2F4)
+
 
 # 1️⃣ Quickly diagnose hardware
 

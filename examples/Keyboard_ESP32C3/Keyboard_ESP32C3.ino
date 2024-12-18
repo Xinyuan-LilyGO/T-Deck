@@ -6,10 +6,10 @@
  * @date      2023-04-11
  *
  */
-
+#include <Arduino.h>
 #ifdef CONFIG_IDF_TARGET_ESP32C3
 #define I2C_DEV_ADDR 0x55
-#define keyborad_BL_PIN  9
+#define keyboard_BL_PIN  9
 #define SDA  2
 #define SCL  10
 
@@ -38,7 +38,7 @@ bool keyPressed(int colIndex, int rowIndex);
 bool keyActive(int colIndex, int rowIndex);
 bool isPrintableKey(int colIndex, int rowIndex);
 void printMatrix();
-void set_keyborad_BL(bool state);
+void set_keyboard_BL(bool state);
 
 void setup()
 {
@@ -130,8 +130,8 @@ void setup()
     Wire.begin((uint8_t)I2C_DEV_ADDR, SDA, SCL, 0);
 
     Serial.println("Starting keyboard work!");
-    pinMode(keyborad_BL_PIN, OUTPUT);
-    digitalWrite(keyborad_BL_PIN, BL_state);
+    pinMode(keyboard_BL_PIN, OUTPUT);
+    digitalWrite(keyboard_BL_PIN, BL_state);
 
 
     Serial.println("4");
@@ -165,10 +165,10 @@ void loop()
         comdata_flag = true;
     }
     if (keyActive(0, 4) && keyPressed(3, 4)) { //Alt+B
-
         Serial.println("Alt+B");
         BL_state = !BL_state;
-        set_keyborad_BL(BL_state);
+        set_keyboard_BL(BL_state);
+        comdata_flag = false;   //Don't send char
     }
     if (keyActive(0, 4) && keyPressed(2, 5)) { //Alt+C
         Serial.println("Alt+C");
@@ -186,10 +186,7 @@ void onRequest()
         Serial.println(comdata);
     } else {
         Wire.print((char)0x00);
-        //Wire.print(NULL);
     }
-
-    Serial.println("onRequest");
 }
 
 void readMatrix()
@@ -245,9 +242,9 @@ bool isPrintableKey(int colIndex, int rowIndex)
 }
 
 // Keyboard backlit status
-void set_keyborad_BL(bool state)
+void set_keyboard_BL(bool state)
 {
-    digitalWrite(keyborad_BL_PIN, state);
+    digitalWrite(keyboard_BL_PIN, state);
 }
 
 void printMatrix()

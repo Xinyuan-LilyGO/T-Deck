@@ -62,6 +62,9 @@ struct LrFhssRate_t {
 
   /*! \brief Coding rate */
   uint8_t cr;
+
+  /*! \brief Grid spacing */
+  bool narrowGrid;
 };
 
 /*!
@@ -74,6 +77,9 @@ union DataRate_t {
 
   /*! \brief Interpretation for FSK modems */
   FSKRate_t fsk;
+
+  /*! \brief Interpretation for LR-FHSS modems */
+  LrFhssRate_t lrFhss;
 };
 
 /*!
@@ -122,6 +128,16 @@ union ChannelScanConfig_t {
 
   /*! \brief Interpretation for modems that use RSSI threshold*/
   RSSIScanConfig_t rssi;
+};
+
+/*!
+  \enum ModemType_t
+  \brief Type of modem, used by setModem.
+*/
+enum ModemType_t {
+  FSK = 0,
+  LoRa,
+  LRFHSS,
 };
 
 /*!
@@ -638,6 +654,21 @@ class PhysicalLayer {
     */
     virtual void clearChannelScanAction();
 
+    /*!
+      \brief Set modem for the radio to use. Will perform full reset and reconfigure the radio
+      using its default parameters.
+      \param modem Modem type to set. Not all modems are implemented by all radio modules!
+      \returns \ref status_codes
+    */
+    virtual int16_t setModem(ModemType_t modem);
+
+    /*!
+      \brief Get modem currently in use by the radio.
+      \param modem Pointer to a variable to save the retrieved configuration into.
+      \returns \ref status_codes
+    */
+    virtual int16_t getModem(ModemType_t* modem);
+
     #if RADIOLIB_INTERRUPT_TIMING
 
     /*!
@@ -696,6 +727,7 @@ class PhysicalLayer {
     friend class BellClient;
     friend class FT8Client;
     friend class LoRaWANNode;
+    friend class M17Client;
 };
 
 #endif

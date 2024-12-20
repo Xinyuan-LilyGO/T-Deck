@@ -8,6 +8,8 @@
 #include "../../Module.h"
 
 #include "../../protocols/PhysicalLayer/PhysicalLayer.h"
+#include "../../utils/FEC.h"
+#include "../../utils/CRC.h"
 
 // SX126X physical layer properties
 #define RADIOLIB_SX126X_FREQUENCY_STEP_SIZE                     0.9536743164
@@ -199,6 +201,7 @@
 #define RADIOLIB_SX126X_CAL_IMG_863_MHZ_2                       0xDB
 #define RADIOLIB_SX126X_CAL_IMG_902_MHZ_1                       0xE1
 #define RADIOLIB_SX126X_CAL_IMG_902_MHZ_2                       0xE9
+#define RADIOLIB_SX126X_CAL_IMG_FREQ_TRIG_MHZ                   (20.0)
 
 //RADIOLIB_SX126X_CMD_SET_PA_CONFIG
 #define RADIOLIB_SX126X_PA_CONFIG_HP_MAX                        0x07
@@ -434,6 +437,36 @@
 // size of the spectral scan result
 #define RADIOLIB_SX126X_SPECTRAL_SCAN_RES_SIZE                  (33)
 
+// LR-FHSS configuration
+#define RADIOLIB_SX126X_LR_FHSS_CR_5_6                          (0x00UL << 0)   //  7     0     LR FHSS coding rate: 5/6
+#define RADIOLIB_SX126X_LR_FHSS_CR_2_3                          (0x01UL << 0)   //  7     0                          2/3
+#define RADIOLIB_SX126X_LR_FHSS_CR_1_2                          (0x02UL << 0)   //  7     0                          1/2
+#define RADIOLIB_SX126X_LR_FHSS_CR_1_3                          (0x03UL << 0)   //  7     0                          1/3
+#define RADIOLIB_SX126X_LR_FHSS_MOD_TYPE_GMSK                   (0x00UL << 0)   //  7     0     LR FHSS modulation: GMSK
+#define RADIOLIB_SX126X_LR_FHSS_GRID_STEP_FCC                   (0x00UL << 0)   //  7     0     LR FHSS step size: 25.390625 kHz (FCC)
+#define RADIOLIB_SX126X_LR_FHSS_GRID_STEP_NON_FCC               (0x01UL << 0)   //  7     0                        3.90625 kHz (non-FCC)
+#define RADIOLIB_SX126X_LR_FHSS_HOPPING_DISABLED                (0x00UL << 0)   //  7     0     LR FHSS hopping: disabled
+#define RADIOLIB_SX126X_LR_FHSS_HOPPING_ENABLED                 (0x01UL << 0)   //  7     0                      enabled
+#define RADIOLIB_SX126X_LR_FHSS_BW_39_06                        (0x00UL << 0)   //  7     0     LR FHSS bandwidth: 39.06 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_85_94                        (0x01UL << 0)   //  7     0                        85.94 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_136_72                       (0x02UL << 0)   //  7     0                        136.72 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_183_59                       (0x03UL << 0)   //  7     0                        183.59 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_335_94                       (0x04UL << 0)   //  7     0                        335.94 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_386_72                       (0x05UL << 0)   //  7     0                        386.72 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_722_66                       (0x06UL << 0)   //  7     0                        722.66 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_773_44                       (0x07UL << 0)   //  7     0                        773.44 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_1523_4                       (0x08UL << 0)   //  7     0                        1523.4 kHz
+#define RADIOLIB_SX126X_LR_FHSS_BW_1574_2                       (0x09UL << 0)   //  7     0                        1574.2 kHz
+
+// LR-FHSS packet lengths
+#define RADIOLIB_SX126X_LR_FHSS_MAX_ENC_SIZE                    (608)
+#define RADIOLIB_SX126X_LR_FHSS_HEADER_BITS                     (114)
+#define RADIOLIB_SX126X_LR_FHSS_HDR_BYTES                       (10)
+#define RADIOLIB_SX126X_LR_FHSS_SYNC_WORD_BYTES                 (4)
+#define RADIOLIB_SX126X_LR_FHSS_FRAG_BITS                       (48)
+#define RADIOLIB_SX126X_LR_FHSS_BLOCK_PREAMBLE_BITS             (2)
+#define RADIOLIB_SX126X_LR_FHSS_BLOCK_BITS                      (RADIOLIB_SX126X_LR_FHSS_FRAG_BITS + RADIOLIB_SX126X_LR_FHSS_BLOCK_PREAMBLE_BITS)
+
 /*!
   \class SX126x
   \brief Base class for %SX126x series. All derived classes for %SX126x (e.g. SX1262 or SX1268) inherit from this base class.
@@ -488,6 +521,27 @@ class SX126x: public PhysicalLayer {
       \returns \ref status_codes
     */
     int16_t beginFSK(float br, float freqDev, float rxBw, uint16_t preambleLength, float tcxoVoltage, bool useRegulatorLDO = false);
+
+    /*!
+      \brief Initialization method for LR-FHSS modem. This modem only supports transmission!
+      \param bw LR-FHSS bandwidth, one of RADIOLIB_SX126X_LR_FHSS_BW_* values.
+      \param cr LR-FHSS coding rate, one of RADIOLIB_SX126X_LR_FHSS_CR_* values.
+      \param narrowGrid Whether to use narrow (3.9 kHz) or wide (25.39 kHz) grid spacing.
+      \param tcxoVoltage TCXO reference voltage to be set on DIO3. Defaults to 1.6 V, set to 0 to skip.
+      \param useRegulatorLDO Whether to use only LDO regulator (true) or DC-DC regulator (false). Defaults to false.
+      \returns \ref status_codes
+    */
+    int16_t beginLRFHSS(uint8_t bw, uint8_t cr, bool narrowGrid, float tcxoVoltage, bool useRegulatorLDO = false);
+
+    /*!
+      \brief Sets LR-FHSS configuration.
+      \param bw LR-FHSS bandwidth, one of RADIOLIB_SX126X_LR_FHSS_BW_* values.
+      \param cr LR-FHSS coding rate, one of RADIOLIB_SX126X_LR_FHSS_CR_* values.
+      \param hdrCount Header packet count, 1 - 4. Defaults to 3.
+      \param hopSeqId 9-bit seed number for PRNG generation of the hopping sequence. Defaults to 0x13A.
+      \returns \ref status_codes
+    */
+    int16_t setLrFhssConfig(uint8_t bw, uint8_t cr, uint8_t hdrCount = 3, uint16_t hopSeqId = 0x100);
 
     /*!
       \brief Reset method. Will reset the chip to the default state using RST pin.
@@ -830,6 +884,7 @@ class SX126x: public PhysicalLayer {
 
     /*!
       \brief Sets FSK sync word in the form of array of up to 8 bytes.
+      Can also set LR-FHSS sync word, but its length must be 4 bytes.
       \param syncWord FSK sync word to be set.
       \param len FSK sync word length in bytes.
       \returns \ref status_codes
@@ -847,10 +902,10 @@ class SX126x: public PhysicalLayer {
 
     /*!
       \brief Sets node address. Calling this method will also enable address filtering for node address only.
-      \param nodeAddr Node address to be set.
+      \param addr Node address to be set.
       \returns \ref status_codes
     */
-    int16_t setNodeAddress(uint8_t nodeAddr);
+    int16_t setNodeAddress(uint8_t addr);
 
     /*!
       \brief Sets broadcast address. Calling this method will also enable address
@@ -1069,6 +1124,13 @@ class SX126x: public PhysicalLayer {
     */
     int16_t invertIQ(bool enable) override;
 
+    /*!
+      \brief Get modem currently in use by the radio.
+      \param modem Pointer to a variable to save the retrieved configuration into.
+      \returns \ref status_codes
+    */
+    int16_t getModem(ModemType_t* modem) override;
+
     #if !RADIOLIB_EXCLUDE_DIRECT_RECEIVE
     /*!
       \brief Set interrupt service routine function to call when data bit is received in direct mode.
@@ -1134,6 +1196,15 @@ class SX126x: public PhysicalLayer {
     */
     int16_t setPaConfig(uint8_t paDutyCycle, uint8_t deviceSel, uint8_t hpMax = RADIOLIB_SX126X_PA_CONFIG_HP_MAX, uint8_t paLut = RADIOLIB_SX126X_PA_CONFIG_PA_LUT);
 
+     /*!
+      \brief Perform image rejection calibration for the specified frequency.
+      Will try to use Semtech-defined presets first, and if none of them matches,
+      custom iamge calibration will be attempted using calibrateImageRejection.
+      \param freq Frequency to perform the calibration for.
+      \returns \ref status_codes
+    */
+    int16_t calibrateImage(float freq);
+
     /*!
       \brief Perform image rejection calibration for the specified frequency band.
       WARNING: Use at your own risk! Setting incorrect values may lead to decreased performance
@@ -1172,7 +1243,7 @@ class SX126x: public PhysicalLayer {
     int16_t setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr, uint8_t ldro);
     int16_t setModulationParamsFSK(uint32_t br, uint8_t sh, uint8_t rxBw, uint32_t freqDev);
     int16_t setPacketParams(uint16_t preambleLen, uint8_t crcType, uint8_t payloadLen, uint8_t hdrType, uint8_t invertIQ);
-    int16_t setPacketParamsFSK(uint16_t preambleLen, uint8_t crcType, uint8_t syncWordLen, uint8_t addrCmp, uint8_t whiten, uint8_t packType = RADIOLIB_SX126X_GFSK_PACKET_VARIABLE, uint8_t payloadLen = 0xFF, uint8_t preambleDetectorLen = RADIOLIB_SX126X_GFSK_PREAMBLE_DETECT_16);
+    int16_t setPacketParamsFSK(uint16_t preambleLen, uint8_t preambleDetectorLen, uint8_t crcType, uint8_t syncWordLen, uint8_t addrCmp, uint8_t whiten, uint8_t packType = RADIOLIB_SX126X_GFSK_PACKET_VARIABLE, uint8_t payloadLen = 0xFF);
     int16_t setBufferBaseAddress(uint8_t txBaseAddress = 0x00, uint8_t rxBaseAddress = 0x00);
     int16_t setRegulatorMode(uint8_t mode);
     uint8_t getStatus();
@@ -1185,6 +1256,7 @@ class SX126x: public PhysicalLayer {
 #endif
     const char* chipType = NULL;
     uint8_t bandwidth = 0;
+    float freqMHz = 0;
     
     // Allow subclasses to define different TX modes
     uint8_t txMode = Module::MODE_TX;
@@ -1206,9 +1278,10 @@ class SX126x: public PhysicalLayer {
     bool ldroAuto = true;
 
     uint32_t bitRate = 0, frequencyDev = 0;
-    uint8_t rxBandwidth = 0, pulseShape = 0, crcTypeFSK = 0, syncWordLength = 0, addrComp = 0, whitening = 0, packetType = 0;
+    uint8_t preambleDetLength = 0, rxBandwidth = 0, pulseShape = 0, crcTypeFSK = 0, syncWordLength = 0, addrComp = 0, whitening = 0, packetType = 0;
     uint16_t preambleLengthFSK = 0;
     float rxBandwidthKhz = 0;
+    uint8_t nodeAddr = 0;
 
     float dataRateMeasured = 0;
 
@@ -1218,6 +1291,22 @@ class SX126x: public PhysicalLayer {
     size_t implicitLen = 0;
     uint8_t invertIQEnabled = RADIOLIB_SX126X_LORA_IQ_STANDARD;
 
+    // LR-FHSS stuff - there's a lot of it because all the encoding happens in software
+    uint8_t lrFhssCr = RADIOLIB_SX126X_LR_FHSS_CR_2_3;
+    uint8_t lrFhssBw = RADIOLIB_SX126X_LR_FHSS_BW_722_66;
+    uint8_t lrFhssHdrCount = 3;
+    uint8_t lrFhssSyncWord[RADIOLIB_SX126X_LR_FHSS_SYNC_WORD_BYTES] = { 0x12, 0xAD, 0x10, 0x1B };
+    bool lrFhssGridNonFcc = false;
+    uint16_t lrFhssNgrid = 0;
+    uint16_t lrFhssLfsrState = 0;
+    uint16_t lrFhssPoly = 0;
+    uint16_t lrFhssSeed = 0;
+    uint16_t lrFhssHopSeqId = 0;
+    size_t lrFhssFrameBitsRem = 0;
+    size_t lrFhssFrameHopsRem = 0;
+    size_t lrFhssHopNum = 0;
+
+    int16_t modSetup(float tcxoVoltage, bool useRegulatorLDO, uint8_t modem);
     int16_t config(uint8_t modem);
     bool findChip(const char* verStr);
     int16_t startReceiveCommon(uint32_t timeout = RADIOLIB_SX126X_RX_TIMEOUT_INF, RadioLibIrqFlags_t irqFlags = RADIOLIB_IRQ_RX_DEFAULT_FLAGS, RadioLibIrqFlags_t irqMask = RADIOLIB_IRQ_RX_DEFAULT_MASK);
@@ -1231,6 +1320,11 @@ class SX126x: public PhysicalLayer {
     int16_t fixImplicitTimeout();
     int16_t fixInvertedIQ(uint8_t iqConfig);
 
+    // LR-FHSS utilities
+    int16_t buildLRFHSSPacket(const uint8_t* in, size_t in_len, uint8_t* out, size_t* out_len, size_t* out_bits, size_t* out_hops);
+    int16_t resetLRFHSS();
+    uint16_t stepLRFHSS();
+    int16_t setLRFHSSHop(uint8_t index);
 
     void regdump();
     void effectEvalPre(uint8_t* buff, uint32_t start);

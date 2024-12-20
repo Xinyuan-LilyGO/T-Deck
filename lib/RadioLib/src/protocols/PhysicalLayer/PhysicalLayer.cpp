@@ -1,4 +1,5 @@
 #include "PhysicalLayer.h"
+
 #include <string.h>
 
 PhysicalLayer::PhysicalLayer(float step, size_t maxLen) {
@@ -77,9 +78,7 @@ int16_t PhysicalLayer::receive(String& str, size_t len) {
     } else {
       data = new uint8_t[length + 1];
     }
-    if(!data) {
-      return(RADIOLIB_ERR_MEMORY_ALLOCATION_FAILED);
-    }
+    RADIOLIB_ASSERT_PTR(data);
   #endif
 
   // attempt packet reception
@@ -179,9 +178,7 @@ int16_t PhysicalLayer::readData(String& str, size_t len) {
     uint8_t data[RADIOLIB_STATIC_ARRAY_SIZE + 1];
   #else
     uint8_t* data = new uint8_t[length + 1];
-    if(!data) {
-      return(RADIOLIB_ERR_MEMORY_ALLOCATION_FAILED);
-    }
+    RADIOLIB_ASSERT_PTR(data);
   #endif
 
   // read the received data
@@ -481,7 +478,7 @@ void PhysicalLayer::updateDirectBuffer(uint8_t bit) {
 
     // check complete byte
     if(this->bufferBitPos == 8) {
-      this->buffer[this->bufferWritePos] = Module::reflect(this->buffer[this->bufferWritePos], 8);
+      this->buffer[this->bufferWritePos] = rlb_reflect(this->buffer[this->bufferWritePos], 8);
       RADIOLIB_DEBUG_PROTOCOL_PRINTLN("R\t%X", this->buffer[this->bufferWritePos]);
 
       this->bufferWritePos++;
@@ -528,6 +525,16 @@ void PhysicalLayer::setChannelScanAction(void (*func)(void)) {
 
 void PhysicalLayer::clearChannelScanAction() {
   
+}
+
+int16_t PhysicalLayer::setModem(ModemType_t modem) {
+  (void)modem;
+  return(RADIOLIB_ERR_UNSUPPORTED);
+}
+
+int16_t PhysicalLayer::getModem(ModemType_t* modem) {
+  (void)modem;
+  return(RADIOLIB_ERR_UNSUPPORTED);
 }
 
 #if RADIOLIB_INTERRUPT_TIMING

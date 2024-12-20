@@ -1063,6 +1063,10 @@ class SX127x: public PhysicalLayer {
 
     /*!
       \brief Set interrupt on DIO1 to be sent on a specific IRQ bit (e.g. RxTimeout, CadDone).
+      NOTE: Unlike other modules that support IRQ abstraction (SX126x, LR11x0, etc.),
+      SX127x cannot configure multiple IRQs to signal using the same DIOx pin.
+      This method tries to configure IRQs in a "best effort" approach, and will skip conflicting flags.
+      RADIOLIB_ERR_INVALID_IRQ will be returned in this case.
       \param irq Module-specific IRQ flags.
       \returns \ref status_codes
     */
@@ -1144,6 +1148,13 @@ class SX127x: public PhysicalLayer {
       \returns \ref status_codes
     */
     int16_t invertIQ(bool enable) override;
+
+    /*!
+      \brief Get modem currently in use by the radio.
+      \param modem Pointer to a variable to save the retrieved configuration into.
+      \returns \ref status_codes
+    */
+    int16_t getModem(ModemType_t* modem) override;
 
     #if !RADIOLIB_EXCLUDE_DIRECT_RECEIVE
     /*!

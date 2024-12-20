@@ -15,11 +15,6 @@
 #define RADIOLIB_LORAWAN_CLASS_B                                (0x0B)
 #define RADIOLIB_LORAWAN_CLASS_C                                (0x0C)
 
-// modulation type
-#define RADIOLIB_LORAWAN_MODULATION_LORA                        (0)
-#define RADIOLIB_LORAWAN_MODULATION_GFSK                        (1)
-#define RADIOLIB_LORAWAN_MODULATION_LR_FHSS                     (2)
-
 // preamble format
 #define RADIOLIB_LORAWAN_LORA_SYNC_WORD                         (0x34)
 #define RADIOLIB_LORAWAN_LORA_PREAMBLE_LEN                      (8)
@@ -65,13 +60,14 @@
 #define RADIOLIB_LORAWAN_DATA_RATE_SF_9                         (0x02 << 3) //  5     3                            SF9
 #define RADIOLIB_LORAWAN_DATA_RATE_SF_8                         (0x01 << 3) //  5     3                            SF8
 #define RADIOLIB_LORAWAN_DATA_RATE_SF_7                         (0x00 << 3) //  5     3                            SF7
-#define RADIOLIB_LORAWAN_DATA_RATE_BW                           (0x03 << 1) //  2     1     bandwith mask
+#define RADIOLIB_LORAWAN_DATA_RATE_BW                           (0x03 << 1) //  2     1     bandwidth mask
 #define RADIOLIB_LORAWAN_DATA_RATE_BW_125_KHZ                   (0x00 << 1) //  2     1                        125 kHz
 #define RADIOLIB_LORAWAN_DATA_RATE_BW_250_KHZ                   (0x01 << 1) //  2     1                        250 kHz
 #define RADIOLIB_LORAWAN_DATA_RATE_BW_500_KHZ                   (0x02 << 1) //  2     1     LoRa bandwidth:    500 kHz
 #define RADIOLIB_LORAWAN_DATA_RATE_BW_137_KHZ                   (0x00 << 1) //  2     1                         137 kHz
 #define RADIOLIB_LORAWAN_DATA_RATE_BW_336_KHZ                   (0x01 << 1) //  2     1                         336 kHz
 #define RADIOLIB_LORAWAN_DATA_RATE_BW_1523_KHZ                  (0x02 << 1) //  2     1     LR-FHSS bandwidth: 1523 kHz
+#define RADIOLIB_LORAWAN_DATA_RATE_CR                           (0x01 << 0) //  0     0     coding rate mask
 #define RADIOLIB_LORAWAN_DATA_RATE_CR_1_3                       (0x00 << 0) //  0     0     LR-FHSS coding rate: 1/3
 #define RADIOLIB_LORAWAN_DATA_RATE_CR_2_3                       (0x01 << 0) //  0     0                          2/3
 #define RADIOLIB_LORAWAN_DATA_RATE_UNUSED                       (0xFF << 0) //  7     0     unused data rate
@@ -385,7 +381,7 @@ struct LoRaWANBand_t {
   /*! \brief Maximum allowed frequency (coded in 100 Hz steps) */
   uint32_t freqMax;
 
-  /*! \brief Array of allowed maximum payload lengths for each data rate (global maximum) */
+  /*! \brief Array of allowed maximum application payload lengths for each data rate (N-value) */
   uint8_t payloadLenMax[RADIOLIB_LORAWAN_CHANNEL_NUM_DATARATES];
 
   /*! \brief Maximum allowed output power in this band in dBm */
@@ -504,6 +500,9 @@ struct LoRaWANEvent_t {
   (e.g., server downlink reply to confirmed uplink sent by user application)*/
   bool confirming;
 
+  /*! \brief Whether further downlink messages are pending on the server side. */
+  bool frmPending;
+
   /*! \brief Datarate */
   uint8_t datarate;
   
@@ -605,7 +604,7 @@ class LoRaWANNode {
       \param initialDr The datarate at which to send the first uplink and any subsequent uplinks (unless ADR is enabled).
       \returns \ref status_codes
     */
-    int16_t activateABP(uint8_t initialDr = RADIOLIB_LORAWAN_DATA_RATE_UNUSED);
+    virtual int16_t activateABP(uint8_t initialDr = RADIOLIB_LORAWAN_DATA_RATE_UNUSED);
 
     /*! \brief Whether there is an ongoing session active */
     bool isActivated();
@@ -913,9 +912,6 @@ class LoRaWANNode {
     uint32_t confFCntDown = RADIOLIB_LORAWAN_FCNT_NONE;
     uint32_t adrFCnt = 0;
 
-    // modulation of the currently configured channel
-    uint8_t modulation = RADIOLIB_LORAWAN_MODULATION_LORA;
-
     // ADR is enabled by default
     bool adrEnabled = true;
 
@@ -1069,7 +1065,7 @@ class LoRaWANNode {
     // perform a single CAD operation for the under SF/CH combination. Returns either busy or otherwise.
     bool cadChannelClear();
 
-    // get or create a complete 80-bit channel mask for current configuration
+    // (dynamic bands:) get or (fixed bands:) create a complete 80-bit channel mask for current configuration
     void getChannelPlanMask(uint64_t* chMaskGrp0123, uint32_t* chMaskGrp45);
 
     // setup uplink/downlink channel data rates and frequencies
@@ -1126,5 +1122,31 @@ class LoRaWANNode {
     template<typename T>
     static void hton(uint8_t* buff, T val, size_t size = 0);
 };
+
+template<typename T>
+T LoRaWANNode::ntoh(uint8_t* buff, size_t size) {
+  uint8_t* buffPtr = buff;
+  size_t targetSize = sizeof(T);
+  if(size != 0) {
+    targetSize = size;
+  }
+  T res = 0;
+  for(size_t i = 0; i < targetSize; i++) {
+    res |= (uint32_t)(*(buffPtr++)) << 8*i;
+  }
+  return(res);
+}
+
+template<typename T>
+void LoRaWANNode::hton(uint8_t* buff, T val, size_t size) {
+  uint8_t* buffPtr = buff;
+  size_t targetSize = sizeof(T);
+  if(size != 0) {
+    targetSize = size;
+  }
+  for(size_t i = 0; i < targetSize; i++) {
+    *(buffPtr++) = val >> 8*i;
+  }
+}
 
 #endif

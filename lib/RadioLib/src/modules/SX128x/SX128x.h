@@ -22,6 +22,7 @@
 #define RADIOLIB_SX128X_CMD_READ_REGISTER                       0x19
 #define RADIOLIB_SX128X_CMD_WRITE_BUFFER                        0x1A
 #define RADIOLIB_SX128X_CMD_READ_BUFFER                         0x1B
+#define RADIOLIB_SX128X_CMD_SAVE_CONTEXT                        0xD5
 #define RADIOLIB_SX128X_CMD_SET_SLEEP                           0x84
 #define RADIOLIB_SX128X_CMD_SET_STANDBY                         0x80
 #define RADIOLIB_SX128X_CMD_SET_FS                              0xC1
@@ -670,6 +671,21 @@ class SX128x: public PhysicalLayer {
       \returns \ref status_codes
     */
     int16_t checkOutputPower(int8_t pwr, int8_t* clipped) override;
+    
+    /*!
+      \brief Set modem for the radio to use. Will perform full reset and reconfigure the radio
+      using its default parameters.
+      \param modem Modem type to set - FSK, LoRa or LR-FHSS.
+      \returns \ref status_codes
+    */
+    int16_t setModem(ModemType_t modem) override;
+
+    /*!
+      \brief Get modem currently in use by the radio.
+      \param modem Pointer to a variable to save the retrieved configuration into.
+      \returns \ref status_codes
+    */
+    int16_t getModem(ModemType_t* modem) override;
 
     /*!
       \brief Sets preamble length for currently active modem. Allowed values range from 1 to 65535.
@@ -677,6 +693,13 @@ class SX128x: public PhysicalLayer {
       \returns \ref status_codes
     */
     int16_t setPreambleLength(uint32_t preambleLength);
+
+    /*!
+      \brief Set data rate.
+      \param dr Data rate struct. Interpretation depends on currently active modem (FSK or LoRa).
+      \returns \ref status_codes
+    */
+    int16_t setDataRate(DataRate_t dr) override;
 
     /*!
       \brief Sets FSK or FLRC bit rate. Allowed values are 125, 250, 400, 500, 800, 1000,
@@ -760,6 +783,13 @@ class SX128x: public PhysicalLayer {
       \returns RSSI of the last received packet in dBm.
     */
     float getRSSI() override;
+
+    /*!
+      \brief Gets RSSI (Recorded Signal Strength Indicator).
+      \param packet Whether to read last packet RSSI, or the current value.
+      \returns RSSI value in dBm.
+    */
+    float getRSSI(bool packet);
 
     /*!
       \brief Gets SNR (Signal to Noise Ratio) of the last received packet. Only available for LoRa or ranging modem.

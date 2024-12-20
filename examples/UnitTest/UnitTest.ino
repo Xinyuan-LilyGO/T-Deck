@@ -98,7 +98,6 @@ TouchDrvGT911 touch;
 lv_indev_t  *kb_indev = NULL;
 lv_indev_t  *mouse_indev = NULL;
 lv_indev_t  *touch_indev = NULL;
-lv_group_t  *kb_indev_group;
 
 
 LV_IMG_DECLARE(image_emoji);
@@ -265,7 +264,7 @@ static void wifi_event_cb(WiFiEvent_t event)
 void setupWiFi()
 {
     WiFi.onEvent(wifi_event_cb);
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     configTzTime(DEFAULT_TIMEZONE, NTP_SERVER1, NTP_SERVER2);
     // set notification call-back function
@@ -324,6 +323,8 @@ bool setupRadio()
     } else {
         Serial.print("Start Radio failed,code:");
         Serial.println(state);
+        // T-Deck without LoRa, reinitialize SPI
+        SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI);
         return false;
     }
 
@@ -670,7 +671,7 @@ void vadTask(void *params)
 #error "ESP VAD Not support Version > V5.0.0 , please use IDF V4.4.4"
 #endif
             if (vad_state == VAD_SPEECH) {
-                Serial.print(millis());
+                // Serial.print(millis());
                 // Serial.println(" -> Noise detected!!!");
                 updateNoiseLabel(vad_detected_counter++);
                 last_update_millis = millis();
@@ -782,16 +783,25 @@ void setupAmpI2S(i2s_port_t  i2s_ch)
 
 void setTx()
 {
+    if (!hasRadio) {
+        return ;
+    }
     sender = radio.startTransmit("Hello World!") == RADIOLIB_ERR_NONE;
 }
 
 void setRx()
 {
+    if (!hasRadio) {
+        return ;
+    }
     sender = ! (radio.startReceive() == RADIOLIB_ERR_NONE);
 }
 
 void setFreq(float f)
 {
+    if (!hasRadio) {
+        return ;
+    }
     if (radio.setFrequency(f) != RADIOLIB_ERR_NONE) {
         Serial.println("setFrequency failed!");
     }
@@ -799,6 +809,9 @@ void setFreq(float f)
 
 void setBandWidth(float bw)
 {
+    if (!hasRadio) {
+        return ;
+    }
     if (radio.setBandwidth(bw) != RADIOLIB_ERR_NONE) {
         Serial.println("setBandwidth failed!");
     }
@@ -806,6 +819,9 @@ void setBandWidth(float bw)
 
 void setTxPower(int16_t dBm)
 {
+    if (!hasRadio) {
+        return ;
+    }
     if (radio.setOutputPower(dBm) != RADIOLIB_ERR_NONE) {
         Serial.println("setOutputPower failed!");
     }

@@ -228,6 +228,7 @@ static void radio_interval_cb(lv_event_t *e)
 
 
 LV_IMG_DECLARE(wallpaper);
+extern bool  hasRadio;
 
 void setupUI(void)
 {
@@ -256,30 +257,41 @@ void setupUI(void)
     section = lv_menu_section_create(sub_mechanics_page);
     sub_section.push_back(section);
 
-    lv_obj_t *swTx = create_switch(section, LV_SYMBOL_UP, "Tx", true, lv_radio_tx_event_cb);
-    lv_obj_t *swRx = create_switch(section, LV_SYMBOL_DOWN, "Rx", false, lv_radio_rx_event_cb);
+    if (hasRadio) {
 
-    lv_obj_set_user_data(swTx, swRx);
-    lv_obj_set_user_data(swRx, swTx);
+        lv_obj_t *swTx = create_switch(section, LV_SYMBOL_UP, "Tx", true, lv_radio_tx_event_cb);
+        lv_obj_t *swRx = create_switch(section, LV_SYMBOL_DOWN, "Rx", false, lv_radio_rx_event_cb);
 
-    create_label(section, LV_SYMBOL_LOOP, "Message", NULL);
-    sub_radio_val.label_radio_msg = create_label(section, NULL, NULL, "N.A");
+        lv_obj_set_user_data(swTx, swRx);
+        lv_obj_set_user_data(swRx, swTx);
 
-    lv_obj_t *sub_rf_setting_page = lv_menu_page_create(menu, NULL);
-    lv_obj_set_style_pad_hor(sub_rf_setting_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
-    section = lv_menu_section_create(sub_rf_setting_page);
-    sub_section.push_back(section);
+        create_label(section, LV_SYMBOL_LOOP, "Message", NULL);
+        sub_radio_val.label_radio_msg = create_label(section, NULL, NULL, "N.A");
 
-    create_dropdown(section, NULL, "Freq", radio_freq_list, 2, radio_freq_cb);
-    create_dropdown(section, NULL, "BandWidth", radio_bandwidth_list, 0, radio_bandwidth_cb);
-    create_dropdown(section, NULL, "TxPower", radio_power_level_list, 6, radio_power_cb);
-    create_dropdown(section, NULL, "Interval", radio_tx_interval_list, 3, radio_interval_cb);
+        lv_obj_t *sub_rf_setting_page = lv_menu_page_create(menu, NULL);
+        lv_obj_set_style_pad_hor(sub_rf_setting_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+        section = lv_menu_section_create(sub_rf_setting_page);
+        sub_section.push_back(section);
 
-    section = lv_menu_section_create(sub_mechanics_page);
-    sub_section.push_back(section);
+        create_dropdown(section, NULL, "Freq", radio_freq_list, 2, radio_freq_cb);
+        create_dropdown(section, NULL, "BandWidth", radio_bandwidth_list, 0, radio_bandwidth_cb);
+        create_dropdown(section, NULL, "TxPower", radio_power_level_list, 6, radio_power_cb);
+        create_dropdown(section, NULL, "Interval", radio_tx_interval_list, 3, radio_interval_cb);
 
-    cont = create_text(section, LV_SYMBOL_SETTINGS, "Radio Configure", LV_MENU_ITEM_BUILDER_VARIANT_1);
-    lv_menu_set_load_page_event(menu, cont, sub_rf_setting_page);
+        section = lv_menu_section_create(sub_mechanics_page);
+        sub_section.push_back(section);
+
+        cont = create_text(section, LV_SYMBOL_SETTINGS, "Radio Configure", LV_MENU_ITEM_BUILDER_VARIANT_1);
+        lv_menu_set_load_page_event(menu, cont, sub_rf_setting_page);
+
+    } else {
+        lv_obj_t *cont = lv_obj_create(sub_mechanics_page);
+        lv_obj_set_size(cont, LV_PCT(100), LV_PCT(95));
+        sub_section.push_back(cont);
+        lv_obj_t *label = lv_label_create(cont);
+        lv_label_set_text(label, "Radio is offline");
+        lv_obj_center(label);
+    }
 
 
     // !SOUND

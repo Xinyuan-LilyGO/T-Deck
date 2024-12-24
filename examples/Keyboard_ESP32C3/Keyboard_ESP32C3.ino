@@ -27,7 +27,6 @@ bool changedValue[colCount][rowCount];
 char keyboard[colCount][rowCount];
 char keyboard_symbol[colCount][rowCount];
 
-bool symbolSelected;
 bool BL_state = false;
 bool comdata_flag = false;
 char comdata;
@@ -145,7 +144,6 @@ void setup()
         pinMode(cols[x], INPUT_PULLUP);
     }
 
-    symbolSelected = false;
 }
 
 void loop()
@@ -220,10 +218,6 @@ void readMatrix()
         // disable the column
         pinMode(curCol, INPUT);
     }
-
-    if (keyPressed(0, 2)) {
-        symbolSelected = true;
-    }
 }
 
 bool keyPressed(int colIndex, int rowIndex)
@@ -254,8 +248,8 @@ void printMatrix()
             // we only want to print if the key is pressed and it is a printable character
             if (keyPressed(colIndex, rowIndex) && isPrintableKey(colIndex, rowIndex)) {
                 char toPrint;
-                if (symbolSelected) {
-                    symbolSelected = false;
+
+                if (keyActive(0, 2)) {
                     toPrint = char(keyboard_symbol[colIndex][rowIndex]);
                 } else {
                     toPrint = char(keyboard[colIndex][rowIndex]);

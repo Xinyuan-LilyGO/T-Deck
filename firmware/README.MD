@@ -9,7 +9,7 @@
 
 | Firmware Name                                                                                        | description                                    |
 | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [T-Keyboard_Keyboard_ESP32C3_241218.bin](./T-Keyboard_Keyboard_ESP32C3_241218.bin)                   | [T-Deck Keyboard C3 firmware][1]               |
+| [T-Keyboard_Keyboard_ESP32C3_241225.bin](./T-Keyboard_Keyboard_ESP32C3_241225.bin)                   | [T-Deck Keyboard C3 firmware][1]               |
 | [T-Deck_UnitTest_241004.bin](./T-Deck_UnitTest_241004.bin)                                           | [T-Deck/T-Deck-Plus function test firmware][1] |
 | [firmware.meshtastic.factory.v2.5.8-pset-gps.bin](./firmware.meshtastic.factory.v2.5.8-pset-gps.bin) | [T-Deck/T-Deck-Plus factory firmware][2]       |
 | [T-Deck-Plus-TouchFix_241025.bin](./T-Deck-Plus-TouchFix_241025.bin)                                 | [T-Deck-Plus Touch Fix][2]                     |

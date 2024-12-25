@@ -4,16 +4,29 @@
  * @license   MIT
  * @copyright Copyright (c) 2023  Shenzhen Xin Yuan Electronic Technology Co., Ltd
  * @date      2023-04-11
- *
+ * @Revision  : 
+ * * 2024-12-16 : Fixed issue https://github.com/Xinyuan-LilyGO/T-Deck/issues/69
+ * * 2024-12-24 : Fixed issue https://github.com/Xinyuan-LilyGO/T-Deck/issues/70
+ * * 2024-12-25   Added keyboard backlight control
  */
 #include <Arduino.h>
-#ifdef CONFIG_IDF_TARGET_ESP32C3
-#define I2C_DEV_ADDR 0x55
-#define keyboard_BL_PIN  9
-#define SDA  2
-#define SCL  10
+#include <Wire.h>
 
-#include "Wire.h"
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+
+#define I2C_DEV_ADDR                        0x55
+#define keyboard_BL_PIN                     9
+#define SDA                                 2
+#define SCL                                 10
+#define KB_BRIGHTNESS_CH                    0
+#define KB_BRIGHTNESS_FREQ                  1000
+#define KB_BRIGHTNESS_RES                   8     //Resolution_bits
+#define KB_BRIGHTNESS_BOOT_DUTY             0
+#define KB_BRIGHTNESS_DEFAULT_DUTY          127   //Alt+B default duty , is duty is zero , use setting duty
+
+
+#define LILYGO_KB_BRIGHTNESS_CMD            0x01
+#define LILYGO_KB_ALT_B_BRIGHTNESS_CMD      0x02
 
 uint8_t  rows[] = {0, 3, 19, 12, 18, 6, 7 };
 const int rowCount = sizeof(rows) / sizeof(rows[0]);
@@ -30,6 +43,20 @@ char keyboard_symbol[colCount][rowCount];
 bool BL_state = false;
 bool comdata_flag = false;
 char comdata;
+/*
+* Dynamically modify backlight brightness at runtime
+* Brightness Range: 0 ~ 255
+* */
+uint8_t kb_brightness_duty = KB_BRIGHTNESS_BOOT_DUTY;
+
+/*
+* Set the default backlight brightness level. If the user sets the backlight to 0
+* via setKeyboardBrightness, the default brightness is used when pressing ALT+B,
+* rather than the backlight brightness level set by the user. This ensures that
+* pressing ALT+B can respond to the backlight being turned on and off normally.
+* Brightness Range: 30 ~ 255
+* */
+uint8_t kb_brightness_setting_duty = KB_BRIGHTNESS_DEFAULT_DUTY;   //Alt+B default duty , is duty is zero , use setting duty
 
 void onRequest();
 void readMatrix();
@@ -39,8 +66,49 @@ bool isPrintableKey(int colIndex, int rowIndex);
 void printMatrix();
 void set_keyboard_BL(bool state);
 
+
+void onReceive(int len)
+{
+    // Serial.printf("onReceive[%d]: ", len);
+    while (Wire.available()) {
+        int cmd = Wire.read();
+        switch (cmd) {
+        case LILYGO_KB_BRIGHTNESS_CMD: {
+            int duty = Wire.read();
+            if (duty >= 0) {
+                kb_brightness_duty = duty;
+                // Serial.printf("B:%d", duty);
+                ledcWrite(KB_BRIGHTNESS_CH, duty);
+                if (duty > 0) {
+                    BL_state = true;
+                } else if (duty == 0) {
+                    BL_state = false;
+                }
+            }
+        }
+        case LILYGO_KB_ALT_B_BRIGHTNESS_CMD: {
+            int duty = Wire.read();
+            if (duty > 30) {
+                kb_brightness_setting_duty = duty;
+            }
+        }
+        break;
+        default:
+            break;
+        }
+    }
+    // Serial.println();
+}
+
 void setup()
 {
+    // Reduce operating power consumption arduino esp32 core version must >= 2.0.17
+    /*
+    * 10MHZ can also run normally, but for stable operation, change the frequency to 80MHZ to prevent it from failing to run due to crystal oscillator problems
+    * setCpuFrequencyMhz(10);
+    * */
+    setCpuFrequencyMhz(80);
+
     // put your setup code here, to run once:
     keyboard[0][0] = 'q';
     keyboard[0][1] = 'w';
@@ -126,12 +194,14 @@ void setup()
 
     Serial.setDebugOutput(true);
     Wire.onRequest(onRequest);
-    Wire.begin((uint8_t)I2C_DEV_ADDR, SDA, SCL, 0);
+    Wire.onReceive(onReceive);
+    Wire.begin((uint8_t)I2C_DEV_ADDR, SDA, SCL, 100000UL);
 
     Serial.println("Starting keyboard work!");
-    pinMode(keyboard_BL_PIN, OUTPUT);
-    digitalWrite(keyboard_BL_PIN, BL_state);
 
+    ledcAttachPin(keyboard_BL_PIN, KB_BRIGHTNESS_CH);
+    ledcSetup(KB_BRIGHTNESS_CH, KB_BRIGHTNESS_FREQ, KB_BRIGHTNESS_RES);
+    ledcWrite(KB_BRIGHTNESS_CH, KB_BRIGHTNESS_BOOT_DUTY);
 
     Serial.println("4");
     for (int x = 0; x < rowCount; x++) {
@@ -164,8 +234,21 @@ void loop()
     }
     if (keyActive(0, 4) && keyPressed(3, 4)) { //Alt+B
         Serial.println("Alt+B");
-        BL_state = !BL_state;
-        set_keyboard_BL(BL_state);
+        // If the software sets the duty cycle to 0, then the value set
+        // by the ATL+B register is used to ensure that ALT+B can normally light up the backlight.
+        if (BL_state) {
+            BL_state = false;
+            ledcWrite(KB_BRIGHTNESS_CH, 0); //turn off
+        } else {
+            BL_state = true;
+            if (kb_brightness_duty == 0) {
+                Serial.println("User set bl duty is zero,use setting duty");
+                ledcWrite(KB_BRIGHTNESS_CH, kb_brightness_setting_duty);
+            } else {
+                Serial.println("Duty is not zero ,use user setting bl value");
+                ledcWrite(KB_BRIGHTNESS_CH, kb_brightness_duty);
+            }
+        }
         comdata_flag = false;   //Don't send char
     }
     if (keyActive(0, 4) && keyPressed(2, 5)) { //Alt+C
@@ -235,12 +318,6 @@ bool isPrintableKey(int colIndex, int rowIndex)
     return keyboard_symbol[colIndex][rowIndex] != NULL || keyboard[colIndex][rowIndex] != NULL;
 }
 
-// Keyboard backlit status
-void set_keyboard_BL(bool state)
-{
-    digitalWrite(keyboard_BL_PIN, state);
-}
-
 void printMatrix()
 {
     for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
@@ -277,7 +354,7 @@ void setup()
 }
 void loop()
 {
-    Serial.println("OSKETCH ONLY FOR LILYGO-KEYBOARD");
+    Serial.println("SKETCH ONLY FOR LILYGO-KEYBOARD");
     delay(1000);
 }
 #endif

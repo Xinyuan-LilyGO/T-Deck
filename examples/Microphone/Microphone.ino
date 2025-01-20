@@ -90,12 +90,10 @@ void setup()
     pin_config.bck_io_num = BOARD_ES7210_SCK;
     pin_config.ws_io_num = BOARD_ES7210_LRCK;
     pin_config.data_in_num = BOARD_ES7210_DIN;
-    // pin_config.mck_io_num = BOARD_ES7210_MCLK;
-    pin_config.mck_io_num = I2S_PIN_NO_CHANGE;
+    pin_config.mck_io_num = BOARD_ES7210_MCLK;
     i2s_driver_install(I2S_CH, &i2s_config, 0, NULL);
     i2s_set_pin(I2S_CH, &pin_config);
     i2s_zero_dma_buffer(I2S_CH);
-    // i2s_start(I2S_NUM_1);
 
 
     vad_inst = vad_create(VAD_MODE_0);

@@ -149,13 +149,23 @@ void updateNoiseLabel(uint32_t cnt)
 }
 
 const char *radio_freq_list =
+#ifdef  JAPAN_MIC
+    "920MHZ";
+#else
     "433MHZ\n"
     "470MHZ\n"
     "850MHZ\n"
     "868MHZ\n"
     "915MHZ\n"
     "923MHZ";
-const float freq_list[] = {433.0, 470.0, 850.0, 868.0, 915.0, 923.0};
+#endif
+const float freq_list[] = {
+#ifdef  JAPAN_MIC
+    920.0
+#else
+    433.0, 470.0, 850.0, 868.0, 915.0, 923.0
+#endif
+};
 
 const char *radio_bandwidth_list =
     "125KHz\n"
@@ -273,7 +283,12 @@ void setupUI(void)
         section = lv_menu_section_create(sub_rf_setting_page);
         sub_section.push_back(section);
 
-        create_dropdown(section, NULL, "Freq", radio_freq_list, 2, radio_freq_cb);
+#ifdef  JAPAN_MIC
+        uint8_t freq_index = 0;
+#else
+        uint8_t freq_index = 2;
+#endif
+        create_dropdown(section, NULL, "Freq", radio_freq_list, freq_index, radio_freq_cb);
         create_dropdown(section, NULL, "BandWidth", radio_bandwidth_list, 0, radio_bandwidth_cb);
         create_dropdown(section, NULL, "TxPower", radio_power_level_list, 6, radio_power_cb);
         create_dropdown(section, NULL, "Interval", radio_tx_interval_list, 3, radio_interval_cb);

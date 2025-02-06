@@ -60,7 +60,11 @@
 
 
 #ifndef RADIO_FREQ
+#ifdef  JAPAN_MIC
+#define RADIO_FREQ           920.0
+#else
 #define RADIO_FREQ           868.0
+#endif
 #endif
 
 #ifndef RADIO_BANDWIDTH

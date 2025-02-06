@@ -317,7 +317,7 @@ bool setupRadio()
     SPI.end();
     SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI); //SD
 
-    int state = radio.begin(RADIO_FREQ);
+    int state = radio.begin();
     if (state == RADIOLIB_ERR_NONE) {
         Serial.println("Start Radio success!");
     } else {
@@ -327,6 +327,8 @@ bool setupRadio()
         SPI.begin(BOARD_SPI_SCK, BOARD_SPI_MISO, BOARD_SPI_MOSI);
         return false;
     }
+
+    Serial.printf("Freq:%.2f TxPower:%d Bandwidth:%.2f\n", RADIO_FREQ, RADIO_TX_POWER, RADIO_BANDWIDTH);
 
     hasRadio = true;
 

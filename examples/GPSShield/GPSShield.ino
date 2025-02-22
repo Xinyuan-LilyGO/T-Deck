@@ -73,7 +73,7 @@ bool setupGPS()
     // Initialize the L76K Chip, use GPS + GLONASS
     SerialGPS.write("$PCAS04,5*1C\r\n");
     delay(250);
-    SerialGPS.write("$PCAS03,1,1,1,1,1,1,1,1,1,1,,,0,0*26\r\n");
+    SerialGPS.write("$PCAS03,1,1,1,1,1,1,1,1,1,1,,,0,0*02\r\n");
     delay(250);
     // Switch to Vehicle Mode, since SoftRF enables Aviation < 2g
     SerialGPS.write("$PCAS11,3*1E\r\n");

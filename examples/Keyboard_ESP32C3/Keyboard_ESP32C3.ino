@@ -199,8 +199,8 @@ void setup()
 
     Serial.println("Starting keyboard work!");
 
-    ledcAttachPin(keyboard_BL_PIN, KB_BRIGHTNESS_CH);
     ledcSetup(KB_BRIGHTNESS_CH, KB_BRIGHTNESS_FREQ, KB_BRIGHTNESS_RES);
+    ledcAttachPin(keyboard_BL_PIN, KB_BRIGHTNESS_CH);
     ledcWrite(KB_BRIGHTNESS_CH, KB_BRIGHTNESS_BOOT_DUTY);
 
     Serial.println("4");

@@ -3,7 +3,8 @@
 - This page provides a quick diagnosis of whether the hardware is normal. The firmware in the example table below provides quick testing of the hardware. Please follow the steps below to test
 - [T-Deck Plus Touch Fix Record](https://youtu.be/CTdMXJvWZpA)
 - [How to write firmware to T-Deck or T-Deck-Plus Record](https://www.youtube.com/watch?v=aSjUyzw_2F4)
-
+- [Discussion about touch repair](https://www.reddit.com/r/meshtastic/comments/1jizmsb/tdeck_touchscreen_not_working_properly/)
+- **Please note that if meshtastic is written, the port displayed after plugging in the computer USB is a virtual USB port, not a real port number. You must manually enter the download mode to perform the secondary flash. For how to enter the download mode, please see the FAQ below.**
 
 # 1️⃣ Quickly diagnose hardware
 

@@ -15,7 +15,12 @@
 | [firmware-t-deck-v2.5.21.447533a.bin](./firmware-t-deck-v2.5.21.447533a.bin)       | [T-Deck/T-Deck-Plus factory firmware][2]       |
 | [T-Deck-Plus-TouchFix_241025.bin](./T-Deck-Plus-TouchFix_241025.bin)               | [T-Deck-Plus Touch Fix][2]                     |
 | [T-Deck-Plus-TouchFix_241203.bin](./T-Deck-Plus-TouchFix_241203.bin)               | [T-Deck-Plus Touch Fix][2]                     |
-| [T-Deck-Plus-Device-UI-v2.6.5.bin](./T-Deck-Plus-Device-UI-v2.6.5.bin)             | [T-Deck-Plus meshtastic ui firmware][2]        |
+| [T-Deck-Plus-Device-UI-v2.6.11.bin](./T-Deck-Plus-Device-UI-v2.6.11.bin)           | [T-Deck-Plus meshtastic ui firmware][2]        |
+
+
+> \[!IMPORTANT]
+> Meshtastic firmware v2.6.11 modifies the touch access method. Some devices may not respond to touch sensitively. After flashing this firmware, touch should be normal. 
+
 
 ⚠⚠⚠
 

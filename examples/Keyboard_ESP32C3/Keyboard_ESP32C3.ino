@@ -27,6 +27,8 @@
 
 #define LILYGO_KB_BRIGHTNESS_CMD            0x01
 #define LILYGO_KB_ALT_B_BRIGHTNESS_CMD      0x02
+#define LILYGO_KB_MODE_RAW_CMD              0x03
+#define LILYGO_KB_MODE_KEY_CMD              0x04
 
 uint8_t  rows[] = {0, 3, 19, 12, 18, 6, 7 };
 const int rowCount = sizeof(rows) / sizeof(rows[0]);
@@ -39,6 +41,7 @@ bool lastValue[colCount][rowCount];
 bool changedValue[colCount][rowCount];
 char keyboard[colCount][rowCount];
 char keyboard_symbol[colCount][rowCount];
+bool rawMode = 0;
 
 bool BL_state = false;
 bool comdata_flag = false;
@@ -66,7 +69,6 @@ bool isPrintableKey(int colIndex, int rowIndex);
 void printMatrix();
 void set_keyboard_BL(bool state);
 
-
 void onReceive(int len)
 {
     // Serial.printf("onReceive[%d]: ", len);
@@ -91,6 +93,16 @@ void onReceive(int len)
             if (duty > 30) {
                 kb_brightness_setting_duty = duty;
             }
+        }
+        break;
+        case LILYGO_KB_MODE_RAW_CMD: {
+            rawMode = true;
+            Serial.println("Switched to raw mode");
+        }
+        break;
+        case LILYGO_KB_MODE_KEY_CMD: {
+            rawMode = false;
+            Serial.println("Switched to key mode");
         }
         break;
         default:
@@ -260,13 +272,27 @@ void loop()
 
 void onRequest()
 {
-    if (comdata_flag) {
-        Wire.print(comdata);
-        comdata_flag = false;
-        Serial.print("comdata :");
-        Serial.println(comdata);
-    } else {
-        Wire.print((char)0x00);
+    if(rawMode) {
+        for(uint8_t col = 0; col < colCount; col++) {
+            uint8_t val = 0;
+            for(uint8_t row = 0; row < rowCount; row++) {
+                val |= (lastValue[col][row] << row);
+            }
+            Wire.write(val);
+            //Serial.print(val, HEX);
+            //Serial.print(" ");
+        }
+        //Serial.println();
+    }
+    else {
+        if (comdata_flag) {
+            Wire.print(comdata);
+            comdata_flag = false;
+            Serial.print("comdata :");
+            Serial.println(comdata);
+        } else {
+            Wire.print((char)0x00);
+        }
     }
 }
 

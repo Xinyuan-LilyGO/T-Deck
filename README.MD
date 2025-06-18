@@ -68,6 +68,10 @@ You can upload the assets contents for the speaker demo, using the "Upload Files
    6. Upload sketch
    7. If you still cannot upload the sketch successfully according to the above method, please check whether the resistor in this [issue62](https://github.com/Xinyuan-LilyGO/T-Deck/issues/62) exists. Please remove it and test again.
 
+5. fatal error: esp_vad.h: No such file or directory
+   1. See [issus](https://github.com/Xinyuan-LilyGO/T-Deck/issues/90#issuecomment-2980116659)
+
+
 ## 4️⃣ Where to buy:
 
 1. [AliExpress](https://www.aliexpress.com/item/1005005692235592.html)

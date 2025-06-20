@@ -1395,3 +1395,20 @@ static bool GPS_Recovery()
     }
     return true;
 }
+
+
+#define LILYGO_KB_BRIGHTNESS_CMD            0x01
+#define LILYGO_KB_ALT_B_BRIGHTNESS_CMD      0x02
+#define LILYGO_KB_MODE_RAW_CMD              0x03
+#define LILYGO_KB_MODE_KEY_CMD              0x04
+
+void setKeyboardBrightness(uint8_t level)
+{
+    if (!kbDetected) {
+        return ;
+    }
+    Wire.beginTransmission(0x55);
+    Wire.write(LILYGO_KB_BRIGHTNESS_CMD);
+    Wire.write(level);
+    Wire.endTransmission();
+}

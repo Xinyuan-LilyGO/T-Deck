@@ -69,6 +69,7 @@ extern void soundPlay();
 extern void setBandWidth(float bw);
 extern void setTxPower(int16_t dBm);
 extern void setSenderInterval(uint32_t interval_ms);
+extern void setKeyboardBrightness(uint8_t level);
 extern bool        enterSleep;
 
 extern String gps_model;
@@ -81,7 +82,12 @@ void lv_brightness_cb(lv_event_t *e)
     setBrightness(val);
 }
 
-
+void lv_kb_brightness_cb(lv_event_t *e)
+{
+    lv_obj_t *obj = lv_event_get_target(e);
+    uint8_t val =  lv_slider_get_value(obj);
+    setKeyboardBrightness(val);
+}
 
 void lv_background_opa_cb(lv_event_t *e)
 {
@@ -334,6 +340,7 @@ void setupUI(void)
 
     create_slider(section, LV_SYMBOL_SETTINGS, "Brightness", 1, 16, 16, lv_brightness_cb, LV_EVENT_VALUE_CHANGED);
     create_slider(section, LV_SYMBOL_SETTINGS, "Background", 0, 255, DEFAULT_OPA, lv_background_opa_cb, LV_EVENT_VALUE_CHANGED);
+    create_slider(section, LV_SYMBOL_SETTINGS, "KB-Background", 0, 255, DEFAULT_OPA, lv_kb_brightness_cb, LV_EVENT_VALUE_CHANGED);
 
 
     // !GPS

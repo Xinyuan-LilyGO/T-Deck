@@ -10,9 +10,8 @@
 
 | Firmware Name                                                                      | description                                    |
 | ---------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [T-Keyboard_Keyboard_ESP32C3_241225.bin](./T-Keyboard_Keyboard_ESP32C3_241225.bin) | [T-Deck Keyboard C3 firmware][1]               |
+| [T-Keyboard_Keyboard_ESP32C3_250620.bin](./T-Keyboard_Keyboard_ESP32C3_250620.bin) | [T-Deck Keyboard C3 firmware][1]               |
 | [T-Deck_UnitTest_241220.bin](./T-Deck_UnitTest_241220.bin)                         | [T-Deck/T-Deck-Plus function test firmware][1] |
-| [firmware-t-deck-v2.5.21.447533a.bin](./firmware-t-deck-v2.5.21.447533a.bin)       | [T-Deck/T-Deck-Plus factory firmware][2]       |
 | [T-Deck-Plus-TouchFix_241025.bin](./T-Deck-Plus-TouchFix_241025.bin)               | [T-Deck-Plus Touch Fix][2]                     |
 | [T-Deck-Plus-TouchFix_241203.bin](./T-Deck-Plus-TouchFix_241203.bin)               | [T-Deck-Plus Touch Fix][2]                     |
 | [T-Deck-Plus-Device-UI-v2.6.11.bin](./T-Deck-Plus-Device-UI-v2.6.11.bin)           | [T-Deck-Plus meshtastic ui firmware][2]        |
@@ -20,6 +19,7 @@
 
 > \[!IMPORTANT]
 > Meshtastic firmware v2.6.11 modifies the touch access method. Some devices may not respond to touch sensitively. After flashing this firmware, touch should be normal. 
+> 20250620:The update has been merged into the main branch, and you can flash the latest firmware on Meshtastic for testing.
 
 
 ⚠⚠⚠

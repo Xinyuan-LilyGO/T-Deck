@@ -7,7 +7,8 @@
  * @Revision  : 
  * * 2024-12-16 : Fixed issue https://github.com/Xinyuan-LilyGO/T-Deck/issues/69
  * * 2024-12-24 : Fixed issue https://github.com/Xinyuan-LilyGO/T-Deck/issues/70
- * * 2024-12-25   Added keyboard backlight control
+ * * 2024-12-25 : Added keyboard backlight control
+ * * 2025-06-12 : Add new commands to allow reading raw key states by @kilrah
  */
 #include <Arduino.h>
 #include <Wire.h>

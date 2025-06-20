@@ -98,7 +98,7 @@ TouchDrvGT911 touch;
 lv_indev_t  *kb_indev = NULL;
 lv_indev_t  *mouse_indev = NULL;
 lv_indev_t  *touch_indev = NULL;
-
+uint32_t    gps_start_ms = 0;
 
 LV_IMG_DECLARE(image_emoji);
 
@@ -155,7 +155,7 @@ static bool GPS_Recovery();
 extern void updateGPS(double lat, double lng,
                       uint16_t year, uint8_t month, uint8_t day,
                       uint8_t hour, uint8_t minute, uint8_t second,
-                      double speed, uint32_t rx_char );
+                      double speed, uint32_t rx_char, uint32_t use_sec);
 extern void updateNoiseLabel(uint32_t cnt);
 extern void setLoRaMessage(const char *text);
 extern void setupUI(void);
@@ -471,10 +471,12 @@ void taskPlaySong(void *p)
     }
 }
 
+uint32_t gps_update_interval = 0;
+bool update_use_second = false;
+uint32_t gps_use_second = 0;
+
 void loopGPS()
 {
-    static  uint32_t gps_update_interval = 0;
-
     unsigned long start = millis();
     do {
         while (SerialGPS.available()) {
@@ -485,6 +487,14 @@ void loopGPS()
     } while (millis() - start < 20);
 
     if (gps_update_interval < millis()) {
+
+        bool location = gps.location.isValid();
+        bool datetime = (gps.date.year() > 2000);
+        if (location && datetime && !update_use_second) {
+            update_use_second = true;
+            gps_use_second = (millis() - gps_start_ms) / 1000;
+        }
+
         updateGPS(gps.location.lat(),
                   gps.location.lng(),
                   gps.date.year(),
@@ -494,7 +504,8 @@ void loopGPS()
                   gps.time.minute(),
                   gps.time.second(),
                   gps.speed.value(),
-                  gps.charsProcessed());
+                  gps.charsProcessed(),
+                  gps_use_second);
         gps_update_interval = millis()  + 3000;
     }
 }
@@ -1039,6 +1050,8 @@ void setup()
         }
     }
 
+    // Record GPS start time
+    gps_start_ms = millis();
 
     lv_obj_del(logo);
 

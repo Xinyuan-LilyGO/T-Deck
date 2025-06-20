@@ -23,6 +23,7 @@ typedef struct {
     lv_obj_t *label_time;
     lv_obj_t *label_speed;
     lv_obj_t *label_processchar;
+    lv_obj_t *label_use_seconds;
 } Deck_GPS_t;
 
 Deck_GPS_t sub_gps_val;
@@ -36,7 +37,7 @@ typedef struct {
 Deck_Radio_t sub_radio_val;
 static lv_obj_t *sound_vad_label;
 
-std::vector<lv_obj_t *>sub_section;
+std::vector < lv_obj_t * > sub_section;
 
 enum {
     LV_MENU_ITEM_BUILDER_VARIANT_1,
@@ -130,11 +131,15 @@ void setLoRaMessage(const char *text)
 void updateGPS(double lat, double lng,
                uint16_t year, uint8_t month, uint8_t day,
                uint8_t hour, uint8_t minute, uint8_t second,
-               double speed, uint32_t rx_char )
+               double speed, uint32_t rx_char, uint32_t use_sec)
 {
+    if (use_sec == 0) {
+        lv_label_set_text_fmt(sub_gps_val.label_use_seconds, "N.A");
+    } else {
+        lv_label_set_text_fmt(sub_gps_val.label_use_seconds, "%u", use_sec);
+    }
     lv_label_set_text_fmt(sub_gps_val.label_lng, "%.6f", lng);
     lv_label_set_text_fmt(sub_gps_val.label_lat, "%.6f", lat);
-
     lv_label_set_text_fmt(sub_gps_val.label_date, "%u/%u/%u", year, month, day);
     lv_label_set_text_fmt(sub_gps_val.label_time, "%u:%u:%u", hour, minute, second);
     lv_label_set_text_fmt(sub_gps_val.label_speed, "%.6f", speed);
@@ -339,6 +344,7 @@ void setupUI(void)
     sub_section.push_back(section);
 
     create_label(section, LV_SYMBOL_GPS, "Model", gps_model.c_str());
+    sub_gps_val.label_use_seconds = create_label(section, LV_SYMBOL_GPS, "Use Seconds", "N.A");
     sub_gps_val.label_lat = create_label(section, LV_SYMBOL_GPS, "lat", "N.A");
     sub_gps_val.label_lng = create_label(section, LV_SYMBOL_GPS, "lng", "N.A");
     sub_gps_val.label_speed = create_label(section, LV_SYMBOL_SETTINGS, "Speed", "N.A");

@@ -60,17 +60,16 @@ You can upload the assets contents for the speaker demo, using the "Upload Files
    ![c3_boot](images/c3_boot.jpg)
 
 4. T-Deck can't upload any sketch，Please enter the upload mode manually.
-   1. Connect the board via the USB cable
-   2. Press and hold the BOOT button , While still pressing the BOOT(On the trackball above the keyboard, press down) button
-   3. Press RST button
-   4. Release the RST button
-   5. Release the BOOT button
-   6. Upload sketch
-   7. If you still cannot upload the sketch successfully according to the above method, please check whether the resistor in this [issue62](https://github.com/Xinyuan-LilyGO/T-Deck/issues/62) exists. Please remove it and test again.
+   1. Connect the USB-C cable
+   2. Toggle the switch to ON
+   3. Press and hold the center trackball
+   4. Press the left reset button
+   5. Upload sketch
+   6. If you still cannot upload the sketch successfully according to the above method, please check whether the resistor in this [issue62](https://github.com/Xinyuan-LilyGO/T-Deck/issues/62) exists. Please remove it and test again.
+   7. [How to enter download mode Youtube](https://youtu.be/29g97dYt9-g)
 
 5. fatal error: esp_vad.h: No such file or directory
    1. See [issus](https://github.com/Xinyuan-LilyGO/T-Deck/issues/90#issuecomment-2980116659)
-
 
 ## 4️⃣ Where to buy:
 

@@ -8,7 +8,7 @@
 // ##################################################################################
 
 #define ST7789_DRIVER      // ST7789 driver for T-Deck
-#define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
+#define TFT_RGB_ORDER TFT_BGR  // Colour order Red-Green-Blue
 
 // Display resolution (T-Deck is 320x240 in portrait)
 #define TFT_WIDTH  320

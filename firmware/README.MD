@@ -11,10 +11,11 @@
 | Firmware Name                                                                      | description                                          |
 | ---------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | [T-Keyboard_Keyboard_ESP32C3_250620.bin](./T-Keyboard_Keyboard_ESP32C3_250620.bin) | [T-Deck Keyboard C3 firmware][1]                     |
-| [T-Deck_UnitTest_241220.bin](./T-Deck_UnitTest_241220.bin)                         | [T-Deck/T-Deck-Plus function test firmware][1]       |
 | [T-Deck-Plus-TouchFix_241025.bin](./T-Deck-Plus-TouchFix_241025.bin)               | [T-Deck-Plus Touch Fix][2]                           |
 | [T-Deck-Plus-TouchFix_241203.bin](./T-Deck-Plus-TouchFix_241203.bin)               | [T-Deck-Plus Touch Fix][2]                           |
-| [Meshtastic Online][https://flasher.meshtastic.org/]                               | [Meshtastic Online][https://flasher.meshtastic.org/] |
+| [firmware-t-deck-tft-2.7.10.94d4bdf.bin](./firmware-t-deck-tft-2.7.10.94d4bdf.bin) | [Meshtastic firmware][2]                             |
+| [T-Deck_UnitTest_251113.bin](./T-Deck_UnitTest_241220.bin)                         | [T-Deck/T-Deck-Plus old version factory firmware][1] |
+| [tdeck-sx1262-factory-20261024-0x0.bin](./tdeck-sx1262-factory-20261024-0x0.bin)   | [T-Deck/T-Deck-Plus latest factory firmware]         |
 
 ⚠⚠⚠
 
@@ -23,7 +24,6 @@
 **T-Deck-Plus-TouchFix_241025.bin** Touch repair program, can only be flashed on rounded corner screens, please do not flash this on T-Deck rectangular screens, otherwise the screen touch will fail
 
 **T-Deck-Plus-TouchFix_241025.bin** Touch repair program, can only be flashed on rounded corner screens, please do not flash this on T-Deck rectangular screens, otherwise the screen touch will fail
-
 
 [1]: https://www.lilygo.cc/products/t-deck
 [2]: https://www.lilygo.cc/products/t-deck

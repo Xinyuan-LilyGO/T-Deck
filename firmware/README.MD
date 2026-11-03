@@ -15,7 +15,7 @@
 | [T-Deck-Plus-TouchFix_241203.bin](./T-Deck-Plus-TouchFix_241203.bin)               | [T-Deck-Plus Touch Fix][2]                           |
 | [firmware-t-deck-tft-2.7.10.94d4bdf.bin](./firmware-t-deck-tft-2.7.10.94d4bdf.bin) | [Meshtastic firmware][2]                             |
 | [T-Deck_UnitTest_251113.bin](./T-Deck_UnitTest_241220.bin)                         | [T-Deck/T-Deck-Plus old version factory firmware][1] |
-| [tdeck-sx1262-factory-20261029-0x0.bin](./tdeck-sx1262-factory-20261029-0x0.bin)   | [T-Deck/T-Deck-Plus latest factory firmware]         |
+| [tdeck-sx1262-factory-20261103-0x0.bin](./tdeck-sx1262-factory-20261103-0x0.bin)   | [T-Deck/T-Deck-Plus latest factory firmware]         |
 
 ⚠⚠⚠
 
